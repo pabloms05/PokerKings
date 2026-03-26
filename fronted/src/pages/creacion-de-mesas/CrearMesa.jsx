@@ -49,6 +49,7 @@ function CreateTablePage({ onNavigate, onCreate }) {
               onChange={handleChange}
               className="form-input"
               placeholder="Ej: Mesa de amigos"
+              maxLength={50}
               required
             />
           </div>

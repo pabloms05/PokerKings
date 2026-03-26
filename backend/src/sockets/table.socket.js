@@ -2,6 +2,7 @@ import { Game, Table, Hand, HandAction, User, TableChatMessage } from '../models
 import pokerEngine from '../services/pokerEngine.js';
 import { emitLobbyTables } from './lobby.socket.js';
 import { getGameState } from '../services/game.service.js';
+import { filterChat } from '../services/chatModeration.js';
 
 const MAX_CHAT_MESSAGES_PER_TABLE = 60;
 const MAX_CHAT_MESSAGE_LENGTH = 300;
@@ -217,6 +218,8 @@ export const setupTableSocket = (io, socket) => {
         return;
       }
 
+      const filteredMessage = filterChat(message);
+
       const normalizedTableId = String(tableId);
       const activeTableId = String(socket.data?.tableId || '');
       if (activeTableId !== normalizedTableId) {
@@ -238,7 +241,7 @@ export const setupTableSocket = (io, socket) => {
         return;
       }
 
-      const passSpamCheck = registerChatAndCheckSpam(normalizedTableId, userId, message);
+      const passSpamCheck = registerChatAndCheckSpam(normalizedTableId, userId, filteredMessage);
       if (!passSpamCheck) {
         if (typeof callback === 'function') {
           callback({
@@ -255,7 +258,7 @@ export const setupTableSocket = (io, socket) => {
       const storedMessage = await TableChatMessage.create({
         tableId: normalizedTableId,
         userId,
-        message
+        message: filteredMessage
       });
 
       const chatMessage = {
@@ -264,7 +267,7 @@ export const setupTableSocket = (io, socket) => {
         userId,
         username: user?.username || 'Jugador',
         avatar: user?.avatar || '🎭',
-        message,
+        message: filteredMessage,
         createdAt: storedMessage.createdAt
       };
 

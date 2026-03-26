@@ -3,6 +3,7 @@ import { getIO } from '../config/socket.js';
 import { emitLobbyTables } from '../sockets/lobby.socket.js';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env.js';
+import { sanitizeTableName, validateTableNameModeration } from '../services/tableNameModeration.js';
 
 const syncTableFromLatestGame = async (table) => {
   const latestGame = await Game.findOne({
@@ -58,8 +59,16 @@ export const getTable = async (req, res) => {
 export const createTable = async (req, res) => {
   try {
     const { name, smallBlind, bigBlind, maxPlayers, isPrivate, tableColor, botsCount } = req.body;
+    const validation = validateTableNameModeration(name);
+    if (!validation.isValid) {
+      return res.status(400).json({
+        message: validation.message,
+        code: validation.code
+      });
+    }
+
     const table = await Table.create({
-      name,
+      name: sanitizeTableName(name),
       smallBlind,
       bigBlind,
       maxPlayers: maxPlayers || 6,

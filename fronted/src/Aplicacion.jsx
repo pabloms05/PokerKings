@@ -14,6 +14,7 @@ import { authService } from './servicios/autenticacion'
 import { tableAPI, userAPI } from './servicios/api'
 import { socketService } from './servicios/socketBase'
 import { addGameInvitation, removeGameInvitation } from './servicios/invitaciones'
+import { validateTableName } from './servicios/filtroNombreMesa'
 
 function App() {
   const [user, setUser] = useState(null)
@@ -226,6 +227,11 @@ function App() {
   const handleCreateTable = async (formData) => {
     try {
       console.log('Creando mesa:', formData)
+      const nameValidation = validateTableName(formData.tableName)
+      if (!nameValidation.isValid) {
+        toast.error(nameValidation.message)
+        return
+      }
       
       // Llamar al backend para crear la mesa
       const tableData = {
@@ -253,6 +259,10 @@ function App() {
         setCurrentView('partida')
         
       } catch (apiError) {
+        if (apiError?.response) {
+          throw apiError
+        }
+
         // Si backend no está disponible, crear mesa localmente
         console.warn('Backend no disponible, creando mesa localmente')
         const localTable = {
@@ -268,7 +278,7 @@ function App() {
       }
     } catch (err) {
       console.error('Error creando mesa:', err)
-      toast.error('No se pudo crear la mesa')
+      toast.error(err?.response?.data?.message || 'No se pudo crear la mesa')
     }
   }
 

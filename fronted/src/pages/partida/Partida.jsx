@@ -204,9 +204,38 @@ function TablePage({ table, user, onNavigate }) {
       if (pokerGame.gameId) {
         await gameAPI.leaveGame(pokerGame.gameId, user?.id);
       }
+
       if (table?.id) {
+        // Fuerza sync global del estado de la mesa para los demás clientes,
+        // y vuelve a unir este cliente como espectador.
         gameSocket.leaveTable(table.id);
+        try {
+          await gameSocket.joinTable(table.id);
+        } catch (socketErr) {
+          console.warn('⚠️ No se pudo re-unir como espectador tras levantarse:', socketErr.message);
+        }
       }
+
+      // Mantenerse en la sala de la mesa para recibir estado como espectador.
+      // Además, actualizar localmente para que el asiento se libere al instante.
+      pokerGame.setPlayers((prevPlayers) => prevPlayers.map((player) => {
+        if (String(player?.userId) !== String(user?.id)) {
+          return player;
+        }
+
+        return {
+          ...player,
+          isSittingOut: true,
+          folded: true,
+          hand: null,
+          holeCards: null,
+          committed: 0,
+          betInPhase: 0,
+          lastAction: null,
+          chips: 0
+        };
+      }));
+
       setIsSpectator(true);
       setShowMenu(false);
       console.log('👁️ Usuario cambió a modo espectador');
