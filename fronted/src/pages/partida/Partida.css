@@ -88,6 +88,10 @@
   gap: 0.5rem;
 }
 
+.menu-backdrop {
+  display: none;
+}
+
 .btn-menu {
   background: rgba(15, 52, 96, 0.5);
   border: 2px solid rgba(218, 165, 32, 0.4);
@@ -611,9 +615,79 @@
   }
 
   .table-stats {
-    flex-direction: row;
+    flex-wrap: wrap;
     gap: 0.5rem;
-    align-items: center;
+    align-items: stretch;
+    border-radius: 14px;
+    overflow: visible;
+    padding: 0.35rem;
+  }
+
+  .stat {
+    border-right: none;
+    border: 1px solid rgba(218, 165, 32, 0.2);
+    border-radius: 10px;
+    padding: 0.3rem 0.55rem;
+    font-size: 0.76rem;
+  }
+
+  .menu-container {
+    width: 100%;
+    align-items: flex-end;
+  }
+
+  .btn-menu.compact {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0.4rem 0.7rem;
+    font-size: 1.25rem;
+  }
+
+  .menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1995;
+  }
+
+  .menu-dropdown {
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    top: auto;
+    bottom: 0.75rem;
+    min-width: 0;
+    border-radius: 16px;
+    max-height: 72vh;
+    overflow-y: auto;
+    z-index: 2000;
+    animation: slideUp 0.22s ease-out;
+  }
+
+  .menu-item {
+    padding: 1rem;
+    min-height: 56px;
+    justify-content: center;
+  }
+
+  .menu-icon {
+    margin-right: 0;
+  }
+
+  .menu-desc {
+    margin-left: 0;
+    font-size: 0.8rem;
+  }
+
+  .table-chat-panel,
+  .table-chat-panel.compact {
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    width: auto;
+    height: min(72vh, 520px);
+    z-index: 2100;
   }
 
   .actions-panel {
@@ -622,14 +696,6 @@
 
   .btn-action {
     width: 100%;
-  }
-
-  .table-chat-panel {
-    left: 0.5rem;
-    right: 0.5rem;
-    bottom: 0.5rem;
-    width: auto;
-    height: min(60vh, 420px);
   }
 }
 

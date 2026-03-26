@@ -266,6 +266,7 @@ function TablePage({ table, user, onNavigate }) {
         }
       }
       setIsSpectator(false);
+      setShowMenu(false);
       console.log('🪡 Usuario volvió a sentarse en la mesa');
     } catch (err) {
       console.error('Error al volver a sentarse:', err);
@@ -501,6 +502,10 @@ function TablePage({ table, user, onNavigate }) {
           >
             {isCompact ? '☰' : '☰ Menú'}
           </button>
+
+          {showMenu && isCompact && (
+            <div className="menu-backdrop" onClick={() => setShowMenu(false)} />
+          )}
           
           {/* Dropdown del menú */}
           {showMenu && (
