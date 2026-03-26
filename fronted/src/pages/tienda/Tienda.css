@@ -1,0 +1,245 @@
+/* ===============================
+   TIENDA DE FICHAS
+   =============================== */
+
+.tienda-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%);
+  padding: 1.5rem;
+  color: #e0e0e0;
+}
+
+/* Header */
+.tienda-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.tienda-titulo h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: #daa520;
+  text-shadow: 0 0 15px rgba(218, 165, 32, 0.4);
+}
+
+.tienda-subtitulo {
+  margin: 0;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.saldo-actual {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  background: rgba(218, 165, 32, 0.1);
+  border: 1px solid rgba(218, 165, 32, 0.3);
+  border-radius: 12px;
+  padding: 0.6rem 1.2rem;
+}
+
+.saldo-label {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.saldo-valor {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #daa520;
+}
+
+/* Aviso fichas gratis */
+.aviso-gratis {
+  background: rgba(11, 102, 35, 0.2);
+  border: 1px solid rgba(11, 102, 35, 0.5);
+  border-radius: 10px;
+  padding: 0.8rem 1.2rem;
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+  color: #90ee90;
+}
+
+/* Grid de paquetes */
+.paquetes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* Tarjeta de paquete */
+.paquete-card {
+  position: relative;
+  background: linear-gradient(145deg, #1a1a2e, #16213e);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 1.8rem 1.2rem 1.4rem;
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  overflow: hidden;
+}
+
+.paquete-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--card-color, #daa520);
+  border-radius: 16px 16px 0 0;
+}
+
+.paquete-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--card-color, #daa520);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(218, 165, 32, 0.15);
+}
+
+.paquete-card.popular {
+  border-color: var(--card-color, #9c27b0);
+  box-shadow: 0 0 25px rgba(156, 39, 176, 0.3);
+}
+
+/* Badge */
+.paquete-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--card-color, #daa520);
+  color: #0a0e27;
+  font-size: 0.65rem;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Contenido */
+.paquete-icono {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.2));
+}
+
+.paquete-nombre {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #ccc;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.8rem;
+}
+
+.paquete-fichas {
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: var(--card-color, #daa520);
+  margin-bottom: 0.3rem;
+}
+
+.pk-label {
+  font-size: 1rem;
+  color: #888;
+}
+
+.paquete-precio {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #e0e0e0;
+  margin-bottom: 1.2rem;
+}
+
+.moneda {
+  font-size: 0.7rem;
+  color: #666;
+  display: block;
+}
+
+/* Botón comprar */
+.btn-comprar {
+  width: 100%;
+  background: linear-gradient(135deg, var(--card-color, #daa520), rgba(0,0,0,0.3));
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  font-size: 0.95rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn-comprar:hover:not(:disabled) {
+  opacity: 0.85;
+  transform: scale(1.02);
+}
+
+.btn-comprar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Nota legal */
+.tienda-nota {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #555;
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Botón volver */
+.btn-back {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ccc;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.btn-back:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .tienda-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .saldo-actual {
+    align-self: stretch;
+    align-items: center;
+  }
+
+  .paquetes-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .paquete-icono {
+    font-size: 2.2rem;
+  }
+
+  .paquete-fichas {
+    font-size: 1.2rem;
+  }
+}

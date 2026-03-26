@@ -1,0 +1,233 @@
+/* Register Container - Pantalla completa */
+.register-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #16213e 50%, #0a0e27 100%);
+  padding: 2rem;
+}
+
+/* Register Card */
+.register-card {
+  background: linear-gradient(145deg, #1a1a2e 0%, #0f3460 100%);
+  border: 3px solid #daa520;
+  border-radius: 20px;
+  padding: 3rem 2.5rem;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.8);
+  animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Logo */
+.register-logo {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.register-logo img {
+  max-width: 200px;
+  height: auto;
+  filter: drop-shadow(0 4px 10px rgba(218, 165, 32, 0.5));
+}
+
+/* Title */
+.register-title {
+  color: #daa520;
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 2rem;
+  text-shadow: 0 2px 8px rgba(218, 165, 32, 0.5);
+}
+
+/* Error Alert */
+.register-error {
+  background: rgba(196, 30, 58, 0.2);
+  border: 2px solid #c41e3a;
+  color: #ff6b6b;
+  padding: 1rem;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Form */
+.register-form {
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  color: #daa520;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(218, 165, 32, 0.3);
+  border-radius: 10px;
+  color: #e0e0e0;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-input::placeholder {
+  color: rgba(224, 224, 224, 0.5);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #daa520;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 15px rgba(218, 165, 32, 0.3);
+}
+
+.form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-hint {
+  display: block;
+  color: rgba(224, 224, 224, 0.6);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+/* Register Button */
+.btn-register {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, #0b6623 0%, #085018 100%);
+  border: 2px solid #4ade80;
+  border-radius: 12px;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+}
+
+.btn-register:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0d7a2a 0%, #0a6020 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(11, 102, 35, 0.5);
+}
+
+.btn-register:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-register:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 0.5rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Footer */
+.register-footer {
+  text-align: center;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(218, 165, 32, 0.3);
+}
+
+.footer-text {
+  color: rgba(224, 224, 224, 0.7);
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.btn-switch {
+  background: transparent;
+  border: 2px solid rgba(218, 165, 32, 0.5);
+  color: #daa520;
+  padding: 0.625rem 2rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-switch:hover:not(:disabled) {
+  background: rgba(218, 165, 32, 0.1);
+  border-color: #daa520;
+  transform: scale(1.05);
+}
+
+.btn-switch:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Welcome Bonus */
+.welcome-bonus {
+  background: linear-gradient(135deg, rgba(11, 102, 35, 0.2) 0%, rgba(8, 80, 24, 0.2) 100%);
+  border: 2px solid rgba(74, 222, 128, 0.3);
+  color: #4ade80;
+  padding: 1rem;
+  border-radius: 12px;
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.welcome-bonus strong {
+  color: #ffd700;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .register-container {
+    padding: 1rem;
+  }
+
+  .register-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .register-title {
+    font-size: 1.5rem;
+  }
+
+  .register-logo img {
+    max-width: 150px;
+  }
+}

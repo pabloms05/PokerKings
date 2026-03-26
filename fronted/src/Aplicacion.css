@@ -1,0 +1,29 @@
+.App {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%);
+  background-attachment: fixed;
+}
+
+.jumbotron {
+  background: linear-gradient(145deg, #1a1a2e 0%, #0f3460 100%);
+  padding: 3rem;
+  border-radius: 15px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(218, 165, 32, 0.2);
+  border: 2px solid rgba(218, 165, 32, 0.3);
+  color: #f1f1f1;
+}
+
+.jumbotron h1 {
+  color: #daa520;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  font-weight: bold;
+}
+
+.jumbotron p {
+  color: #e0e0e0;
+}
+
+.jumbotron hr {
+  border-color: rgba(218, 165, 32, 0.5);
+  opacity: 0.5;
+}

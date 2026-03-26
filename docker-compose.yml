@@ -1,0 +1,63 @@
+services:
+
+  # ── Base de datos PostgreSQL ─────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: pokerkings-postgres
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - pokerkings_network
+    environment:
+      POSTGRES_DB: ${DB_NAME:-pokerkings}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-pokerkings}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Aplicación (Backend Node.js + Frontend React compilado) ──
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+        VITE_SOCKET_URL: /
+    container_name: pokerkings-app
+    restart: unless-stopped
+    labels:
+      - "domain=pokerkings.duckdns.org"
+      - "proxy.upstream=pokerkings-app:3000"
+    networks:
+      - pokerkings_network
+      - proxy_network
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-pokerkings}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - JWT_SECRET=${JWT_SECRET:-cambia-esto-en-produccion}
+      - PORT=3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+
+networks:
+  pokerkings_network:
+    driver: bridge
+  proxy_network:
+    external: true
+    name: proxy_network

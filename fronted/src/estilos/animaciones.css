@@ -1,0 +1,325 @@
+/* Animaciones de cartas */
+
+/* Animación de repartir cartas a jugadores */
+@keyframes dealCard {
+  0% {
+    transform: translateY(-500px) translateX(-50%) rotate(-180deg);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* Animación de voltear carta */
+@keyframes flipCard {
+  0% {
+    transform: rotateY(0deg);
+  }
+  50% {
+    transform: rotateY(90deg);
+  }
+  100% {
+    transform: rotateY(0deg);
+  }
+}
+
+/* Animación de revelar cartas comunitarias */
+@keyframes revealCommunityCard {
+  0% {
+    transform: translateY(-100px) scale(0.5) rotateY(180deg);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(10px) scale(1.1) rotateY(0deg);
+  }
+  100% {
+    transform: translateY(0) scale(1) rotateY(0deg);
+    opacity: 1;
+  }
+}
+
+/* Animación de fichas moviéndose al bote */
+@keyframes chipsToPort {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-50px) scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-100px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+/* Animación de ganar bote */
+@keyframes winPot {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.3);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  75% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Animación de pulso para turno de jugador */
+@keyframes playerTurnPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(218, 165, 32, 0.7);
+    border-color: #daa520;
+  }
+  50% {
+    box-shadow: 0 0 0 15px rgba(218, 165, 32, 0);
+    border-color: #ffd700;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(218, 165, 32, 0);
+    border-color: #daa520;
+  }
+}
+
+/* Animación de brillo para ganador */
+@keyframes winnerGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+    border-color: #ffd700;
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(255, 215, 0, 1);
+    border-color: #ffed4e;
+  }
+}
+
+/* Animación de fade in para elementos */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Animación de fade out para elementos */
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+/* Animación de shake para fold */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-10px);
+  }
+  75% {
+    transform: translateX(10px);
+  }
+}
+
+/* Animación de bounce para all-in */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+/* Animación de rotación para timer */
+@keyframes rotate360 {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Animación de cuenta regresiva para timer */
+@keyframes timerCountdown {
+  0% {
+    width: 100%;
+    background: linear-gradient(90deg, #4ade80 0%, #0b6623 100%);
+  }
+  50% {
+    background: linear-gradient(90deg, #ffd700 0%, #daa520 100%);
+  }
+  100% {
+    width: 0%;
+    background: linear-gradient(90deg, #ff6b6b 0%, #c41e3a 100%);
+  }
+}
+
+/* Clases para aplicar animaciones */
+
+/* Aplicar a cartas de jugadores cuando se reparten */
+.card.dealing {
+  animation: dealCard 0.5s ease-out;
+}
+
+.card.dealing:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.card.dealing:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+/* Aplicar a jugador cuando es su turno */
+.player-info.active-turn {
+  animation: playerTurnPulse 2s infinite;
+}
+
+/* Aplicar a jugador ganador */
+.player-info.winner {
+  animation: winnerGlow 1.5s ease-in-out infinite;
+}
+
+/* Aplicar cuando jugador hace fold */
+.player-info.folded {
+  opacity: 0.5;
+  filter: grayscale(80%);
+  animation: shake 0.3s ease-in-out;
+}
+
+/* Aplicar cuando jugador hace all-in */
+.player-info.all-in {
+  animation: bounce 0.5s ease-out;
+}
+
+/* Aplicar a fichas que van al bote */
+.chips.moving-to-pot {
+  animation: chipsToPort 0.8s ease-in forwards;
+}
+
+/* Aplicar al bote cuando alguien gana */
+.pot-container.winner-animation {
+  animation: winPot 0.8s ease-in-out;
+}
+
+/* Aplicar a elementos que aparecen */
+.fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* Aplicar a elementos que desaparecen */
+.fade-out {
+  animation: fadeOut 0.4s ease-out forwards;
+}
+
+/* Transiciones suaves generales */
+.smooth-transition {
+  transition: all 0.3s ease;
+}
+
+.smooth-transition-slow {
+  transition: all 0.6s ease;
+}
+
+/* Efectos hover mejorados */
+.card:hover {
+  transform: translateY(-5px) scale(1.05);
+  transition: transform 0.2s ease;
+}
+
+.position-badge {
+  transition: all 0.3s ease;
+}
+
+.position-badge:hover {
+  transform: scale(1.15);
+}
+
+/* Animación de pulsación para botones */
+@keyframes buttonPress {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.btn-action:active,
+.menu-item:active {
+  animation: buttonPress 0.2s ease;
+}
+
+/* Animación de aparición de modal */
+@keyframes modalSlideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.invite-modal {
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+/* Overlay fade in */
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-overlay {
+  animation: overlayFadeIn 0.3s ease-out;
+}
+
+/* Efecto de carta quemándose (fold) */
+@keyframes burn {
+  0% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.5) sepia(1);
+  }
+  100% {
+    filter: brightness(0.5) grayscale(1);
+    opacity: 0.3;
+  }
+}
+
+.card.burned {
+  animation: burn 0.6s ease-out forwards;
+}

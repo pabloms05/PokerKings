@@ -1,0 +1,17 @@
+# Variables de entorno — NUNCA subir al repo
+.env
+
+# Dependencias
+node_modules/
+**/node_modules/
+
+# Build del frontend
+fronted/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
