@@ -113,14 +113,35 @@ const BettingActions = React.memo(function BettingActions({
             <span className="amount-label">Monto:</span>
             <span className="amount-value">{raiseAmount.toLocaleString()} PK</span>
           </div>
-          <input
-            type="range"
-            min={minRaise}
-            max={playerChips}
-            value={raiseAmount}
-            onChange={(e) => setRaiseAmount(parseInt(e.target.value))}
-            className="raise-slider"
-          />
+          <div className="raise-slider-controls">
+            <button
+              type="button"
+              className="slider-step-btn"
+              onClick={decreaseRaiseAmount}
+              disabled={raiseAmount <= minRaise}
+              aria-label="Disminuir apuesta"
+            >
+              -
+            </button>
+            <input
+              type="range"
+              min={minRaise}
+              max={playerChips}
+              step={1}
+              value={raiseAmount}
+              onChange={(e) => setRaiseAmount(parseInt(e.target.value, 10))}
+              className="raise-slider"
+            />
+            <button
+              type="button"
+              className="slider-step-btn"
+              onClick={increaseRaiseAmount}
+              disabled={raiseAmount >= playerChips}
+              aria-label="Aumentar apuesta"
+            >
+              +
+            </button>
+          </div>
           <div className="slider-limits">
             <span>Min: {minRaise.toLocaleString()}</span>
             <span>Max: {playerChips.toLocaleString()}</span>
