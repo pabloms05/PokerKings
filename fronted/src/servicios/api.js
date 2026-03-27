@@ -132,6 +132,9 @@ export const shopAPI = {
 export const friendAPI = {
   getFriends: () =>
     apiClient.get('/friends'),
+
+  searchUsers: (query, limit = 8) =>
+    apiClient.get(`/friends/search?q=${encodeURIComponent(String(query || '').trim())}&limit=${limit}`),
   
   sendFriendRequest: (target) => {
     if (typeof target === 'string') {

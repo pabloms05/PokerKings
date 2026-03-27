@@ -211,3 +211,68 @@ export const getFriendsOnlineStatus = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const searchUsersForFriendRequest = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const query = String(req.query?.q || '').trim();
+    const limit = Math.min(20, Math.max(1, parseInt(req.query?.limit, 10) || 8));
+
+    if (query.length < 2) {
+      return res.json([]);
+    }
+
+    const friends = await Friend.findAll({
+      where: { userId },
+      attributes: ['friendId']
+    });
+    const friendIds = friends.map((friend) => String(friend.friendId));
+
+    const pendingRequests = await FriendRequest.findAll({
+      where: {
+        status: 'pending',
+        [Op.or]: [
+          { senderId: userId },
+          { receiverId: userId }
+        ]
+      },
+      attributes: ['senderId', 'receiverId']
+    });
+
+    const pendingUserIds = new Set();
+    pendingRequests.forEach((request) => {
+      if (String(request.senderId) === String(userId)) {
+        pendingUserIds.add(String(request.receiverId));
+      } else {
+        pendingUserIds.add(String(request.senderId));
+      }
+    });
+
+    const excludedIds = new Set([String(userId), ...friendIds, ...pendingUserIds]);
+
+    const candidates = await User.findAll({
+      where: {
+        isBot: false,
+        username: { [Op.iLike]: `%${query}%` }
+      },
+      attributes: ['id', 'username', 'avatar'],
+      order: [['username', 'ASC']],
+      limit: 60
+    });
+
+    const filtered = candidates
+      .filter((candidate) => !excludedIds.has(String(candidate.id)))
+      .slice(0, limit);
+
+    const onlineStatus = getOnlineStatusForUsers(filtered.map((user) => String(user.id)));
+
+    res.json(filtered.map((candidate) => ({
+      id: candidate.id,
+      username: candidate.username,
+      avatar: candidate.avatar,
+      online: !!onlineStatus[String(candidate.id)]
+    })));
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

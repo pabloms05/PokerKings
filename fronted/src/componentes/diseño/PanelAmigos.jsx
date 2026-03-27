@@ -8,6 +8,8 @@ function AmigosOffcanvas({ show, onHide }) {
   const [amigos, setAmigos] = useState([]);
   const [pendientes, setPendientes] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
   const friendsRef = useRef([]);
 
   useEffect(() => {
@@ -49,8 +51,46 @@ function AmigosOffcanvas({ show, onHide }) {
   useEffect(() => {
     if (show) {
       loadFriendsData();
+      setBuscarAmigo('');
+      setSearchResults([]);
     }
   }, [show]);
+
+  useEffect(() => {
+    if (!show) return;
+
+    const query = buscarAmigo.trim();
+    if (query.length < 2) {
+      setSearchResults([]);
+      setSearchingUsers(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setSearchingUsers(true);
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await friendAPI.searchUsers(query, 8);
+        if (!isCancelled) {
+          setSearchResults(Array.isArray(response?.data) ? response.data : []);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setSearchResults([]);
+        }
+      } finally {
+        if (!isCancelled) {
+          setSearchingUsers(false);
+        }
+      }
+    }, 280);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [buscarAmigo, show]);
 
   useEffect(() => {
     if (!show) return;
@@ -117,6 +157,21 @@ function AmigosOffcanvas({ show, onHide }) {
       await friendAPI.sendFriendRequest(target);
       toast.success('Solicitud de amistad enviada');
       setBuscarAmigo('');
+      setSearchResults([]);
+      await loadFriendsData();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'No se pudo enviar la solicitud');
+    }
+  };
+
+  const handleAgregarDesdeResultado = async (candidate) => {
+    if (!candidate?.id) return;
+
+    try {
+      await friendAPI.sendFriendRequest({ receiverId: candidate.id });
+      toast.success(`Solicitud enviada a ${candidate.username}`);
+      setBuscarAmigo('');
+      setSearchResults([]);
       await loadFriendsData();
     } catch (error) {
       toast.error(error?.response?.data?.message || 'No se pudo enviar la solicitud');
@@ -186,6 +241,44 @@ function AmigosOffcanvas({ show, onHide }) {
               ➕ Agregar
             </button>
           </div>
+
+          {buscarAmigo.trim().length >= 2 && (
+            <div className="list-group mt-2">
+              {searchingUsers ? (
+                <div className="list-group-item text-muted">
+                  Buscando usuarios...
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div className="list-group-item text-muted">
+                  Sin resultados para "{buscarAmigo.trim()}"
+                </div>
+              ) : (
+                searchResults.map((candidate) => (
+                  <div
+                    key={candidate.id}
+                    className="list-group-item d-flex justify-content-between align-items-center"
+                  >
+                    <div>
+                      <span className="me-2">{candidate.avatar || '👤'}</span>
+                      <strong>{candidate.username}</strong>
+                      <span
+                        className={`badge ms-2 ${candidate.online ? 'bg-success' : 'bg-secondary'}`}
+                        style={{ fontSize: '0.7rem' }}
+                      >
+                        {candidate.online ? 'Online' : 'Offline'}
+                      </span>
+                    </div>
+                    <button
+                      className="btn btn-sm btn-primary"
+                      onClick={() => handleAgregarDesdeResultado(candidate)}
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         <hr />
