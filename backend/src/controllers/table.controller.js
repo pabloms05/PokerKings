@@ -145,9 +145,6 @@ export const joinTable = async (req, res) => {
       });
     }
 
-    user.chips -= buyIn;
-    await user.save();
-
     table.currentPlayers += 1;
     await table.save();
 

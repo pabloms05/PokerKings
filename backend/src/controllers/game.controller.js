@@ -27,6 +27,30 @@ const parsePlayers = (players) => {
   return [];
 };
 
+const chargeBuyInForUser = async (userId, tableBuyIn) => {
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new Error('Usuario no encontrado');
+  }
+
+  if (user.isBot) {
+    return user;
+  }
+
+  const available = Math.max(0, parseInt(user.chips, 10) || 0);
+  if (available < tableBuyIn) {
+    const err = new Error('Fichas insuficientes para sentarse en la mesa');
+    err.code = 'INSUFFICIENT_CHIPS';
+    err.requiredChips = tableBuyIn;
+    err.availableChips = available;
+    throw err;
+  }
+
+  user.chips = available - tableBuyIn;
+  await user.save();
+  return user;
+};
+
 const clearTurnTimer = (gameId) => {
   const existing = turnTimers.get(gameId);
   if (existing) {
@@ -203,8 +227,9 @@ export const startGame = async (req, res) => {
       if (userAlreadyInGame) {
         // Si estaba sentado fuera, permitir reingreso para la siguiente mano
         if (gamePlayers[userInGameIndex]?.isSittingOut) {
+          await chargeBuyInForUser(newPlayerId, tableBuyIn);
+
           // Al reingresar a la mesa se usa un stack fresco de buy-in
-          // (el descuento se hace en /tables/:id/join).
           gamePlayers[userInGameIndex].chips = tableBuyIn;
           gamePlayers[userInGameIndex].isSittingOut = false;
           gamePlayers[userInGameIndex].folded = true;
@@ -249,6 +274,8 @@ export const startGame = async (req, res) => {
         if (!user) {
           return res.status(404).json({ error: 'Usuario no encontrado' });
         }
+
+        await chargeBuyInForUser(newPlayerId, tableBuyIn);
 
         gamePlayers.push({
           userId: user.id,
@@ -308,8 +335,9 @@ export const startGame = async (req, res) => {
       const alreadyInGame = userInGameIndex !== -1;
 
       if (alreadyInGame && gamePlayers[userInGameIndex]?.isSittingOut) {
+        await chargeBuyInForUser(newPlayerId, tableBuyIn);
+
         // Al reingresar a la mesa se usa un stack fresco de buy-in
-        // (el descuento se hace en /tables/:id/join).
         gamePlayers[userInGameIndex].chips = tableBuyIn;
         gamePlayers[userInGameIndex].isSittingOut = false;
         gamePlayers[userInGameIndex].folded = true;
@@ -327,6 +355,7 @@ export const startGame = async (req, res) => {
       if (!alreadyInGame) {
         const user = await User.findByPk(newPlayerId);
         if (user) {
+          await chargeBuyInForUser(newPlayerId, tableBuyIn);
           gamePlayers.push({ userId: user.id, chips: tableBuyIn });
           waitingGame.players = gamePlayers;
           waitingGame.changed('players', true);
@@ -401,8 +430,15 @@ export const startGame = async (req, res) => {
     // Obtener datos de los jugadores (chips de su cuenta)
     const players = await User.findAll({
       where: { id: playerIds },
-      attributes: ['id', 'chips']
+      attributes: ['id', 'chips', 'isBot']
     });
+
+    // Cobrar buy-in para cada jugador humano que se sienta al crear/activar juego.
+    for (const player of players) {
+      if (!player.isBot) {
+        await chargeBuyInForUser(player.id, tableBuyIn);
+      }
+    }
 
     if (players.length < 2) {
       const waitingGameCreated = await Game.create({
@@ -475,6 +511,15 @@ export const startGame = async (req, res) => {
     });
 
   } catch (error) {
+    if (error?.code === 'INSUFFICIENT_CHIPS') {
+      return res.status(400).json({
+        error: error.message,
+        code: error.code,
+        requiredChips: error.requiredChips,
+        availableChips: error.availableChips
+      });
+    }
+
     res.status(500).json({ 
       error: `Error iniciando juego: ${error.message}` 
     });
