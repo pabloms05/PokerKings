@@ -1,5 +1,6 @@
 import { User, FriendRequest, Friend } from '../models/index.js';
 import { Op } from 'sequelize';
+import { getOnlineStatusForUsers } from '../config/socket.js';
 
 export const sendFriendRequest = async (req, res) => {
   try {
@@ -171,6 +172,41 @@ export const removeFriend = async (req, res) => {
     });
 
     res.json({ message: 'Friend removed' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getFriendsOnlineStatus = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const idsParam = req.query?.ids;
+
+    if (!idsParam) {
+      return res.status(400).json({ message: 'ids is required' });
+    }
+
+    const requestedIds = String(idsParam)
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    if (requestedIds.length === 0) {
+      return res.status(400).json({ message: 'ids is required' });
+    }
+
+    const friendships = await Friend.findAll({
+      where: {
+        userId,
+        friendId: { [Op.in]: requestedIds }
+      },
+      attributes: ['friendId']
+    });
+
+    const allowedFriendIds = friendships.map((f) => String(f.friendId));
+    const onlineStatus = getOnlineStatusForUsers(allowedFriendIds);
+
+    res.json({ onlineStatus });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

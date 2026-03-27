@@ -117,6 +117,34 @@ export const socketService = {
     socket?.on('game:invitation', callback);
   },
 
+  onFriendPresence: (callback) => {
+    socket?.on('friend:presence', callback);
+  },
+
+  offFriendPresence: (callback) => {
+    if (callback) {
+      socket?.off('friend:presence', callback);
+      return;
+    }
+    socket?.off('friend:presence');
+  },
+
+  onFriendsPresenceSnapshot: (callback) => {
+    socket?.on('friends:presence:snapshot', callback);
+  },
+
+  offFriendsPresenceSnapshot: (callback) => {
+    if (callback) {
+      socket?.off('friends:presence:snapshot', callback);
+      return;
+    }
+    socket?.off('friends:presence:snapshot');
+  },
+
+  requestFriendsPresenceSnapshot: () => {
+    socket?.emit('friends:presence:request');
+  },
+
   // Remover listeners
   offLobbyUpdate: () => {
     socket?.off('lobby:update');

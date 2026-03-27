@@ -5,6 +5,7 @@ import BettingActions from './AccionesApuesta';
 import usePokerGame from './useJuegoPoker';
 import { gameAPI, friendAPI } from '../../servicios/api';
 import { gameSocket } from '../../servicios/socketJuego';
+import { socketService } from '../../servicios/socketBase';
 import './Partida.css';
 
 function TablePage({ table, user, onNavigate }) {
@@ -28,6 +29,7 @@ function TablePage({ table, user, onNavigate }) {
   const [sendingChat, setSendingChat] = useState(false);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const chatBottomRef = useRef(null);
+  const friendsRef = useRef([]);
 
   // Detectar tamaño de pantalla para colapsar botones
   useEffect(() => {
@@ -35,6 +37,10 @@ function TablePage({ table, user, onNavigate }) {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    friendsRef.current = friends;
+  }, [friends]);
 
   useEffect(() => {
     if (!table?.id) return;
@@ -73,6 +79,63 @@ function TablePage({ table, user, onNavigate }) {
     if (!isChatOpen) return;
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [chatMessages, isChatOpen]);
+
+  useEffect(() => {
+    if (!showInviteModal) return;
+
+    const onFriendPresence = (payload) => {
+      const friendUserId = String(payload?.userId || '');
+      if (!friendUserId) return;
+
+      setFriends((prev) => prev.map((friend) => (
+        String(friend?.id) === friendUserId
+          ? { ...friend, online: !!payload?.online }
+          : friend
+      )));
+    };
+
+    const onPresenceSnapshot = (payload) => {
+      const onlineStatus = payload?.onlineStatus || {};
+      setFriends((prev) => prev.map((friend) => ({
+        ...friend,
+        online: !!onlineStatus[String(friend?.id)]
+      })));
+    };
+
+    socketService.onFriendPresence(onFriendPresence);
+    socketService.onFriendsPresenceSnapshot(onPresenceSnapshot);
+    socketService.requestFriendsPresenceSnapshot();
+
+    return () => {
+      socketService.offFriendPresence(onFriendPresence);
+      socketService.offFriendsPresenceSnapshot(onPresenceSnapshot);
+    };
+  }, [showInviteModal]);
+
+  useEffect(() => {
+    if (!showInviteModal) return;
+
+    const refreshOnlineStatus = async () => {
+      const friendIds = friendsRef.current.map((friend) => friend?.id).filter(Boolean);
+      if (friendIds.length === 0) return;
+
+      try {
+        const response = await friendAPI.getOnlineStatus(friendIds);
+        const onlineStatus = response?.data?.onlineStatus || {};
+        setFriends((prev) => prev.map((friend) => ({
+          ...friend,
+          online: !!onlineStatus[String(friend?.id)]
+        })));
+      } catch (err) {
+        console.warn('No se pudo refrescar online-status en vivo:', err?.message || err);
+      }
+    };
+
+    refreshOnlineStatus();
+    const intervalId = setInterval(refreshOnlineStatus, 4000);
+
+    return () => clearInterval(intervalId);
+  }, [showInviteModal]);
 
   // Usar el hook de juego de póker (conectado con backend)
   const pokerGame = usePokerGame(user);
@@ -359,7 +422,23 @@ function TablePage({ table, user, onNavigate }) {
     try {
       const response = await friendAPI.getFriends();
       const list = Array.isArray(response?.data) ? response.data : [];
-      setFriends(list.map(f => ({ ...f, online: true })));
+
+      const friendIds = list.map((f) => f.id).filter(Boolean);
+      let onlineStatus = {};
+
+      if (friendIds.length > 0) {
+        try {
+          const onlineResponse = await friendAPI.getOnlineStatus(friendIds);
+          onlineStatus = onlineResponse?.data?.onlineStatus || {};
+        } catch (onlineErr) {
+          console.warn('No se pudo consultar estado online de amigos:', onlineErr?.message || onlineErr);
+        }
+      }
+
+      setFriends(list.map((f) => ({
+        ...f,
+        online: !!onlineStatus[String(f.id)]
+      })));
     } catch (err) {
       console.error('Error cargando amigos:', err);
       toast.error('No se pudo cargar la lista de amigos');

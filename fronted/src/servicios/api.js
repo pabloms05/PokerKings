@@ -151,6 +151,14 @@ export const friendAPI = {
   
   removeFriend: (friendId) =>
     apiClient.delete(`/friends/${friendId}`),
+
+  getOnlineStatus: (friendIds = []) => {
+    const ids = (Array.isArray(friendIds) ? friendIds : [])
+      .map((id) => String(id || '').trim())
+      .filter(Boolean)
+      .join(',');
+    return apiClient.get(`/friends/online-status?ids=${encodeURIComponent(ids)}`);
+  },
   
   getPendingRequests: () =>
     apiClient.get('/friends/requests/pending'),

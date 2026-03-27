@@ -4,6 +4,7 @@ import {
   acceptFriendRequest,
   rejectFriendRequest,
   getFriends,
+  getFriendsOnlineStatus,
   getPendingRequests,
   removeFriend
 } from '../controllers/friend.controller.js';
@@ -12,6 +13,7 @@ import { authMiddleware } from '../middlewares/auth.middleware.js';
 const router = express.Router();
 
 router.get('/requests/pending', authMiddleware, getPendingRequests);
+router.get('/online-status', authMiddleware, getFriendsOnlineStatus);
 router.post('/request', authMiddleware, sendFriendRequest);
 router.post('/request/:requestId/accept', authMiddleware, acceptFriendRequest);
 router.post('/request/:requestId/reject', authMiddleware, rejectFriendRequest);
