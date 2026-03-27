@@ -106,9 +106,14 @@ function TablePage({ table, user, onNavigate }) {
     socketService.onFriendsPresenceSnapshot(onPresenceSnapshot);
     socketService.requestFriendsPresenceSnapshot();
 
+    const snapshotIntervalId = setInterval(() => {
+      socketService.requestFriendsPresenceSnapshot();
+    }, 2000);
+
     return () => {
       socketService.offFriendPresence(onFriendPresence);
       socketService.offFriendsPresenceSnapshot(onPresenceSnapshot);
+      clearInterval(snapshotIntervalId);
     };
   }, [showInviteModal]);
 
@@ -132,7 +137,7 @@ function TablePage({ table, user, onNavigate }) {
     };
 
     refreshOnlineStatus();
-    const intervalId = setInterval(refreshOnlineStatus, 4000);
+    const intervalId = setInterval(refreshOnlineStatus, 1500);
 
     return () => clearInterval(intervalId);
   }, [showInviteModal]);

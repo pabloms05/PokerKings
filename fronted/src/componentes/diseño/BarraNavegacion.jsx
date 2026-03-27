@@ -43,7 +43,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
   const handleCerrarSesion = () => {
     // Cerrar cualquier toast de confirmación previo
     toast.dismiss('logout-confirm');
-    
+
     // Mostrar toast de confirmación
     toast((t) => (
       <div style={{ textAlign: 'center' }}>
@@ -54,6 +54,10 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
           <button
             onClick={() => {
               toast.dismiss(t.id);
+              if (onLogout) {
+                onLogout();
+              }
+              //toast.success('Sesión cerrada correctamente');
             }}
             style={{
               padding: '8px 16px',
@@ -64,15 +68,11 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
               cursor: 'pointer'
             }}
           >
-            Cancelar
+            Sí, cerrar sesión
           </button>
           <button
             onClick={() => {
               toast.dismiss(t.id);
-              if (onLogout) {
-                onLogout();
-              }
-              toast.success('Sesión cerrada correctamente');
             }}
             style={{
               padding: '8px 16px',
@@ -83,7 +83,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
               cursor: 'pointer'
             }}
           >
-            Sí, cerrar sesión
+            Cancelar
           </button>
         </div>
       </div>
@@ -99,9 +99,9 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
           </span>
 
           {/* Botón hamburguesa para móvil - FIX: Sin Bootstrap JS */}
-          <button 
-            className="navbar-toggler" 
-            type="button" 
+          <button
+            className="navbar-toggler"
+            type="button"
             onClick={() => setNavbarExpanded(!navbarExpanded)}
             aria-controls="navbarNav"
             aria-expanded={navbarExpanded}
@@ -131,8 +131,8 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
 
               {/* 3. Trofeos */}
               <li className="nav-item">
-                <button 
-                  className="nav-link btn btn-link" 
+                <button
+                  className="nav-link btn btn-link"
                   onClick={openTrofeos}
                 >
                   🏆 Trofeos
@@ -141,8 +141,8 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
 
               {/* 4. Misiones Diarias */}
               <li className="nav-item">
-                <button 
-                  className="nav-link btn btn-link" 
+                <button
+                  className="nav-link btn btn-link"
                   onClick={openMisiones}
                 >
                   ✅ Misiones Diarias
@@ -151,8 +151,8 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
 
               {/* 4. Amigos */}
               <li className="nav-item">
-                <button 
-                  className="nav-link btn btn-link" 
+                <button
+                  className="nav-link btn btn-link"
                   onClick={openAmigos}
                 >
                   👥 Amigos
@@ -161,8 +161,8 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
 
               {/* 5. Invitaciones */}
               <li className="nav-item">
-                <button 
-                  className="nav-link btn btn-link" 
+                <button
+                  className="nav-link btn btn-link"
                   onClick={openInvitaciones}
                 >
                   📨 Invitaciones
@@ -171,8 +171,8 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
 
               {/* 6. Mi Cuenta */}
               <li className="nav-item">
-                <button 
-                  className="nav-link btn btn-link" 
+                <button
+                  className="nav-link btn btn-link"
                   onClick={openAccount}
                 >
                   👤 Mi Cuenta
@@ -181,8 +181,8 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
 
               {/* 7. Cerrar Sesión */}
               <li className="nav-item">
-                <button 
-                  className="nav-link btn btn-link text-danger" 
+                <button
+                  className="nav-link btn btn-link text-danger"
                   onClick={handleCerrarSesion}
                 >
                   🚪 Cerrar Sesión
@@ -194,31 +194,31 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
       </nav>
 
       {/* Offcanvas para Trofeos */}
-      <TrofeosOffcanvas 
-        show={activeOffcanvas === 'trofeos'} 
-        onHide={closeOffcanvas} 
+      <TrofeosOffcanvas
+        show={activeOffcanvas === 'trofeos'}
+        onHide={closeOffcanvas}
       />
 
       {/* Offcanvas para Misiones */}
-      <MisionesOffcanvas 
-        show={activeOffcanvas === 'misiones'} 
-        onHide={closeOffcanvas} 
+      <MisionesOffcanvas
+        show={activeOffcanvas === 'misiones'}
+        onHide={closeOffcanvas}
       />
 
       {/* Offcanvas para Amigos */}
-      <AmigosOffcanvas 
-        show={activeOffcanvas === 'amigos'} 
-        onHide={closeOffcanvas} 
+      <AmigosOffcanvas
+        show={activeOffcanvas === 'amigos'}
+        onHide={closeOffcanvas}
       />
 
       {/* Offcanvas para Invitaciones */}
-      <InvitacionesOffcanvas 
-        show={activeOffcanvas === 'invitaciones'} 
-        onHide={closeOffcanvas} 
+      <InvitacionesOffcanvas
+        show={activeOffcanvas === 'invitaciones'}
+        onHide={closeOffcanvas}
       />
 
       {/* Modal de Mi Cuenta */}
-      <AccountModal 
+      <AccountModal
         show={showAccountModal}
         onHide={() => setShowAccountModal(false)}
         user={user}
