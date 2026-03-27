@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './AccionesApuesta.css';
 
 // FIX: Memoización para evitar re-renders innecesarios
@@ -19,14 +19,32 @@ const BettingActions = React.memo(function BettingActions({
   onRaise,
   onAllIn
 }) {
-  const [raiseAmount, setRaiseAmount] = useState(minRaise);
+  const minAllowedRaise = Math.max(0, Math.min(minRaise, playerChips));
+  const maxAllowedRaise = Math.max(minAllowedRaise, playerChips);
+  const [raiseAmount, setRaiseAmount] = useState(minAllowedRaise);
   const [showRaiseSlider, setShowRaiseSlider] = useState(false);
 
+  useEffect(() => {
+    setRaiseAmount((prev) => {
+      if (prev < minAllowedRaise) return minAllowedRaise;
+      if (prev > maxAllowedRaise) return maxAllowedRaise;
+      return prev;
+    });
+  }, [minAllowedRaise, maxAllowedRaise]);
+
+  const decreaseRaiseAmount = () => {
+    setRaiseAmount((prev) => Math.max(minAllowedRaise, prev - 1));
+  };
+
+  const increaseRaiseAmount = () => {
+    setRaiseAmount((prev) => Math.min(maxAllowedRaise, prev + 1));
+  };
+
   const handleRaise = () => {
-    if (raiseAmount >= minRaise && raiseAmount <= playerChips) {
+    if (raiseAmount >= minAllowedRaise && raiseAmount <= maxAllowedRaise) {
       onRaise(raiseAmount);
       setShowRaiseSlider(false);
-      setRaiseAmount(minRaise);
+      setRaiseAmount(minAllowedRaise);
     }
   };
 
@@ -125,8 +143,8 @@ const BettingActions = React.memo(function BettingActions({
             </button>
             <input
               type="range"
-              min={minRaise}
-              max={playerChips}
+              min={minAllowedRaise}
+              max={maxAllowedRaise}
               step={1}
               value={raiseAmount}
               onChange={(e) => setRaiseAmount(parseInt(e.target.value, 10))}
@@ -136,15 +154,15 @@ const BettingActions = React.memo(function BettingActions({
               type="button"
               className="slider-step-btn"
               onClick={increaseRaiseAmount}
-              disabled={raiseAmount >= playerChips}
+              disabled={raiseAmount >= maxAllowedRaise}
               aria-label="Aumentar apuesta"
             >
               +
             </button>
           </div>
           <div className="slider-limits">
-            <span>Min: {minRaise.toLocaleString()}</span>
-            <span>Max: {playerChips.toLocaleString()}</span>
+            <span>Min: {minAllowedRaise.toLocaleString()}</span>
+            <span>Max: {maxAllowedRaise.toLocaleString()}</span>
           </div>
           <div className="slider-actions">
             <button className="btn-action btn-cancel" onClick={() => setShowRaiseSlider(false)}>
