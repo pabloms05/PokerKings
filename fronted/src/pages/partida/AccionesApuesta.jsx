@@ -136,7 +136,7 @@ const BettingActions = React.memo(function BettingActions({
               type="button"
               className="slider-step-btn"
               onClick={decreaseRaiseAmount}
-              disabled={raiseAmount <= minRaise}
+              disabled={raiseAmount <= minAllowedRaise}
               aria-label="Disminuir apuesta"
             >
               -
