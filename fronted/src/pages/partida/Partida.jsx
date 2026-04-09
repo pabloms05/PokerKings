@@ -23,6 +23,7 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
   const [winnerPopupData, setWinnerPopupData] = useState(null);
   const [spectatorDelayUntil, setSpectatorDelayUntil] = useState(0);
   const [isCompact, setIsCompact] = useState(window.innerWidth < 900);
+  const [showHandsGuide, setShowHandsGuide] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
@@ -688,15 +689,132 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
             </button>
           )}
 
-          <button 
-            className={`btn-menu${vistaCompacta ? ' compact' : ''}`}
-            onClick={() => setMostrarMenu(!mostrarMenu)}
+          <button
+            className="btn-menu btn-hands-guide"
+            onClick={() => setShowHandsGuide((prev) => !prev)}
+            aria-expanded={showHandsGuide}
+            aria-haspopup="true"
           >
-            {vistaCompacta ? '☰' : '☰ Menú'}
+            🃏 Combinaciones {showHandsGuide ? '▲' : '▼'}
           </button>
 
-          {mostrarMenu && vistaCompacta && (
-            <div className="menu-backdrop" onClick={() => setMostrarMenu(false)} />
+          <button 
+            className={`btn-menu${isCompact ? ' compact' : ''}`}
+            onClick={() => setShowMenu(!showMenu)}
+          >
+            {isCompact ? '☰' : '☰ Menú'}
+          </button>
+
+          {showHandsGuide && (
+            <div className="hands-guide-dropdown">
+              <div className="hands-guide-title">Ranking de manos (mayor a menor)</div>
+              <ul className="hands-guide-list">
+                <li>
+                  <strong>Escalera Real</strong>
+                  <div className="hand-example">
+                    <img src="/assets/images/AS.png" alt="A♠" />
+                    <img src="/assets/images/KS.png" alt="K♠" />
+                    <img src="/assets/images/QS.png" alt="Q♠" />
+                    <img src="/assets/images/JS.png" alt="J♠" />
+                    <img src="/assets/images/10S.png" alt="10♠" />
+                  </div>
+                </li>
+                <li>
+                  <strong>Escalera de Color</strong>
+                  <div className="hand-example">
+                    <img src="/assets/images/9S.png" alt="9♠" />
+                    <img src="/assets/images/8S.png" alt="8♠" />
+                    <img src="/assets/images/7S.png" alt="7♠" />
+                    <img src="/assets/images/6S.png" alt="6♠" />
+                    <img src="/assets/images/5S.png" alt="5♠" />
+                  </div>
+                </li>
+                <li>
+                  <strong>Poker</strong>
+                  <div className="hand-example">
+                    <img src="/assets/images/AS.png" alt="A♠" />
+                    <img src="/assets/images/AH.png" alt="A♥" />
+                    <img src="/assets/images/AD.png" alt="A♦" />
+                    <img src="/assets/images/AC.png" alt="A♣" />
+                    <img src="/assets/images/KS.png" alt="K♠" />
+                  </div>
+                </li>
+                <li>
+                  <strong>Full House</strong>
+                  <div className="hand-example">
+                    <img src="/assets/images/AS.png" alt="A♠" />
+                    <img src="/assets/images/AH.png" alt="A♥" />
+                    <img src="/assets/images/AD.png" alt="A♦" />
+                    <img src="/assets/images/KH.png" alt="K♥" />
+                    <img src="/assets/images/KC.png" alt="K♣" />
+                  </div>
+                </li>
+                <li>
+                  <strong>Color</strong>
+                  <div className="hand-example">
+                    <img src="/assets/images/AS.png" alt="A♠" />
+                    <img src="/assets/images/KS.png" alt="K♠" />
+                    <img src="/assets/images/QS.png" alt="Q♠" />
+                    <img src="/assets/images/JS.png" alt="J♠" />
+                    <img src="/assets/images/9S.png" alt="9♠" />
+                  </div>
+                </li>
+                <li>
+                  <strong>Escalera</strong>
+                  <div className="hand-example">
+                    <img src="/assets/images/AS.png" alt="A♠" />
+                    <img src="/assets/images/KH.png" alt="K♥" />
+                    <img src="/assets/images/QD.png" alt="Q♦" />
+                    <img src="/assets/images/JC.png" alt="J♣" />
+                    <img src="/assets/images/10S.png" alt="10♠" />
+                  </div>
+                </li>
+                <li>
+                  <strong>Trio</strong>
+                  <div className="hand-example">
+                    <img src="/assets/images/AS.png" alt="A♠" />
+                    <img src="/assets/images/AH.png" alt="A♥" />
+                    <img src="/assets/images/AD.png" alt="A♦" />
+                    <img src="/assets/images/KH.png" alt="K♥" />
+                    <img src="/assets/images/QC.png" alt="Q♣" />
+                  </div>
+                </li>
+                <li>
+                  <strong>Doble Pareja</strong>
+                  <div className="hand-example">
+                    <img src="/assets/images/AS.png" alt="A♠" />
+                    <img src="/assets/images/AH.png" alt="A♥" />
+                    <img src="/assets/images/KD.png" alt="K♦" />
+                    <img src="/assets/images/KC.png" alt="K♣" />
+                    <img src="/assets/images/QS.png" alt="Q♠" />
+                  </div>
+                </li>
+                <li>
+                  <strong>Pareja</strong>
+                  <div className="hand-example">
+                    <img src="/assets/images/AS.png" alt="A♠" />
+                    <img src="/assets/images/AH.png" alt="A♥" />
+                    <img src="/assets/images/KD.png" alt="K♦" />
+                    <img src="/assets/images/QC.png" alt="Q♣" />
+                    <img src="/assets/images/JS.png" alt="J♠" />
+                  </div>
+                </li>
+                <li>
+                  <strong>Carta Alta</strong>
+                  <div className="hand-example">
+                    <img src="/assets/images/AS.png" alt="A♠" />
+                    <img src="/assets/images/KH.png" alt="K♥" />
+                    <img src="/assets/images/QD.png" alt="Q♦" />
+                    <img src="/assets/images/JC.png" alt="J♣" />
+                    <img src="/assets/images/9S.png" alt="9♠" />
+                  </div>
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {showMenu && isCompact && (
+            <div className="menu-backdrop" onClick={() => setShowMenu(false)} />
           )}
           
           {/* Dropdown del menú */}
