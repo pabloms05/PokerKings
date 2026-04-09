@@ -805,8 +805,7 @@ export const getHandDetails = async (req, res) => {
 export const leaveGame = async (req, res) => {
   const { gameId } = req.params;
   try {
-    const { userId } = req.body;
-    const playerUserId = userId || req.userId;
+    const playerUserId = req.userId;
 
     if (!playerUserId) {
       return res.status(400).json({ error: 'userId es requerido' });

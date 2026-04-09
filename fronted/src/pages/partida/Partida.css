@@ -775,3 +775,126 @@
   60%  { transform: scale(1.2); opacity: 1; }
   100% { transform: scale(1); }
 }
+
+/* ===================== BUSTED REBUY MODAL ===================== */
+.busted-rebuy-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 10, 18, 0.76);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9500;
+  padding: 1rem;
+}
+
+.busted-rebuy-modal {
+  width: min(560px, 100%);
+  background: linear-gradient(160deg, #101c35 0%, #0b1324 100%);
+  border: 2px solid rgba(218, 165, 32, 0.55);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  padding: 1.25rem 1.25rem 1.1rem;
+  color: #f8f9fb;
+}
+
+.busted-rebuy-modal h3 {
+  margin: 0 0 0.55rem;
+  color: #ffd979;
+  font-size: 1.35rem;
+}
+
+.busted-rebuy-text {
+  margin: 0 0 0.9rem;
+  color: #dbe5ff;
+  line-height: 1.45;
+}
+
+.busted-rebuy-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+  font-weight: 700;
+  color: #ffe6a5;
+}
+
+.busted-rebuy-slider {
+  width: 100%;
+  accent-color: #c7982e;
+  margin: 0.35rem 0 0.15rem;
+}
+
+.busted-rebuy-amount {
+  text-align: center;
+  margin: 0.35rem 0 0.65rem;
+  color: #f5f9ff;
+  font-weight: 700;
+}
+
+.busted-rebuy-warning {
+  background: rgba(196, 30, 58, 0.16);
+  border: 1px solid rgba(255, 120, 120, 0.45);
+  color: #ffd9d9;
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.busted-rebuy-error {
+  background: rgba(140, 18, 40, 0.25);
+  border: 1px solid rgba(255, 120, 120, 0.5);
+  color: #ffd5dc;
+  border-radius: 10px;
+  padding: 0.5rem 0.7rem;
+  margin-bottom: 0.7rem;
+  font-size: 0.95rem;
+}
+
+.busted-rebuy-actions {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: flex-end;
+}
+
+.btn-rebuy-primary,
+.btn-rebuy-secondary {
+  border: none;
+  border-radius: 10px;
+  padding: 0.6rem 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-rebuy-primary {
+  background: linear-gradient(135deg, #d8a93a 0%, #b3801f 100%);
+  color: #111;
+}
+
+.btn-rebuy-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-rebuy-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8ecf8;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+@media (max-width: 640px) {
+  .busted-rebuy-modal {
+    padding: 1rem;
+  }
+
+  .busted-rebuy-actions {
+    flex-direction: column;
+  }
+
+  .btn-rebuy-primary,
+  .btn-rebuy-secondary {
+    width: 100%;
+  }
+}

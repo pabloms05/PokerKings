@@ -168,7 +168,12 @@ const usePokerGame = (user) => {
     });
 
     gameSocket.on('handOver', (handData) => {
-      setLastHandResult(handData);
+      const now = Date.now();
+      setLastHandResult({
+        ...(handData || {}),
+        eventAt: now,
+        handKey: `${handData?.gameId || gameId || 'game'}-${now}`
+      });
       setPlayerHasActed(false);
     });
 
@@ -265,12 +270,15 @@ const usePokerGame = (user) => {
         }
 
         if (data.handOver) {
+          const now = Date.now();
           setLastHandResult({
             winnerId: data.winnerId || data.winner?.userId || data.winner?.id,
             winnerName: data.winnerName || data.winner?.username || 'Desconocido',
             winnerIds: data.winnerIds || [],
             winners: data.winners || [],
-            potWon: data.potWon ?? 0
+            potWon: data.potWon ?? 0,
+            eventAt: now,
+            handKey: `${data.gameState?.id || gameId || 'game'}-${now}`
           });
           setPlayerHasActed(false);
         }

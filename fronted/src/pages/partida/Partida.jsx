@@ -22,6 +22,10 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
   const [lastShownHandOver, setLastShownHandOver] = useState(null);
   const [winnerPopupData, setWinnerPopupData] = useState(null);
   const [spectatorDelayUntil, setSpectatorDelayUntil] = useState(0);
+  const [showBustedRebuyModal, setShowBustedRebuyModal] = useState(false);
+  const [rebuyAmount, setRebuyAmount] = useState(0);
+  const [rebuyError, setRebuyError] = useState('');
+  const [rebuyLoading, setRebuyLoading] = useState(false);
   const [isCompact, setIsCompact] = useState(window.innerWidth < 900);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
@@ -144,6 +148,8 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
 
   // Usar el hook de juego de póker (conectado con backend)
   const pokerGame = usePokerGame(user);
+  const tableBuyIn = Math.max(1, (parseInt(table?.bigBlind, 10) || 0) * 100);
+  const walletChips = Math.max(0, parseInt(user?.chips, 10) || 0);
 
   const refreshUserBalance = async () => {
     if (!user?.id || !onUpdateUser) return;
@@ -174,10 +180,11 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
   useEffect(() => {
     if (pokerGame.lastHandResult) {
       const idsKey = (pokerGame.lastHandResult.winnerIds || []).join(',');
-      const key = `${idsKey || pokerGame.lastHandResult.winnerId}-${pokerGame.lastHandResult.potWon}`;
+      const key = pokerGame.lastHandResult.handKey
+        || `${idsKey || pokerGame.lastHandResult.winnerId}-${pokerGame.lastHandResult.potWon}-${pokerGame.lastHandResult.eventAt || ''}`;
       if (key !== lastShownHandOver) {
         const winners = pokerGame.lastHandResult.winners || [];
-        const meWon = (pokerGame.lastHandResult.winnerIds || []).includes(user?.id) || pokerGame.lastHandResult.winnerId === user?.id;
+        const meWon = (pokerGame.lastHandResult.winnerIds || []).map(String).includes(String(user?.id)) || String(pokerGame.lastHandResult.winnerId) === String(user?.id);
 
         setWinnerPopupData({
           winnerName: winners.length > 1
@@ -199,7 +206,10 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
           setSpectatorDelayUntil(until);
           setIsSpectator(false);
 
-          toast.error('Te has quedado sin fichas. Pasarás a modo espectador para la siguiente mano.');
+          const defaultRebuy = Math.min(Math.max(0, Number(user?.chips) || 0), tableBuyIn);
+          setRebuyAmount(defaultRebuy);
+          setRebuyError('');
+          setShowBustedRebuyModal(true);
 
           setTimeout(() => {
             setIsSpectator(true);
@@ -209,12 +219,17 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
         setLastShownHandOver(key);
       }
     }
-  }, [pokerGame.lastHandResult, pokerGame.players, lastShownHandOver, user?.id]);
+  }, [pokerGame.lastHandResult, pokerGame.players, lastShownHandOver, tableBuyIn, user?.chips, user?.id]);
+
+  useEffect(() => {
+    if (!showBustedRebuyModal) return;
+    refreshUserBalance();
+  }, [showBustedRebuyModal]);
 
   // Inicializar el juego desde el backend
   useEffect(() => {
     const initializeGame = async () => {
-      if (!table || !user) return;
+      if (!table?.id || !user?.id) return;
 
       try {
         setLoading(true);
@@ -277,7 +292,7 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
         gameSocket.leaveTable(table.id);
       }
     };
-  }, [table, user]);
+  }, [table?.id, user?.id]);
 
   // Manejar levantarse (modo espectador)
   const handleStandUp = async () => {
@@ -328,7 +343,7 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
   };
 
   // Manejar volver a sentarse
-  const handleSitDown = async () => {
+  const handleSitDown = async ({ fromRebuyModal = false } = {}) => {
     try {
       if (table && user) {
         // Re-unirse a la sala de WebSocket (por si se había desconectado)
@@ -351,9 +366,47 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
       }
       setIsSpectator(false);
       setShowMenu(false);
+      if (fromRebuyModal) {
+        setShowBustedRebuyModal(false);
+        setRebuyError('');
+      }
       console.log('🪡 Usuario volvió a sentarse en la mesa');
+      return true;
     } catch (err) {
       console.error('Error al volver a sentarse:', err);
+      const apiError = err?.response?.data;
+      const message = apiError?.code === 'INSUFFICIENT_CHIPS'
+        ? `No tienes fichas suficientes para recargar. Necesitas ${tableBuyIn.toLocaleString()} PK y tienes ${Math.max(0, Number(apiError?.availableChips ?? user?.chips ?? 0)).toLocaleString()} PK.`
+        : (apiError?.error || apiError?.message || 'No se pudo recargar asiento en la mesa.');
+
+      if (fromRebuyModal) {
+        setRebuyError(message);
+      }
+      toast.error(message);
+      return false;
+    }
+  };
+
+  const handleConfirmRebuy = async () => {
+    setRebuyError('');
+    const available = Math.max(0, Number(user?.chips) || 0);
+    const selected = Math.max(0, Number(rebuyAmount) || 0);
+
+    if (selected > available) {
+      setRebuyError('La cantidad de recarga no puede ser mayor que tus fichas disponibles.');
+      return;
+    }
+
+    if (selected < tableBuyIn) {
+      setRebuyError(`Esta mesa requiere un buy-in minimo de ${tableBuyIn.toLocaleString()} PK para volver a sentarte.`);
+      return;
+    }
+
+    setRebuyLoading(true);
+    try {
+      await handleSitDown({ fromRebuyModal: true });
+    } finally {
+      setRebuyLoading(false);
     }
   };
 
@@ -568,6 +621,60 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
         </div>
       )}
 
+      {showBustedRebuyModal && (
+        <div className="busted-rebuy-overlay">
+          <div className="busted-rebuy-modal">
+            <h3>Te has quedado sin fichas</h3>
+            <p className="busted-rebuy-text">
+              Te quedas como espectador hasta que recargues. Ajusta la recarga desde tus fichas totales.
+            </p>
+
+            <div className="busted-rebuy-row">
+              <span>En cartera: {walletChips.toLocaleString()} PK</span>
+              <span>Buy-in mesa: {tableBuyIn.toLocaleString()} PK</span>
+            </div>
+
+            <input
+              className="busted-rebuy-slider"
+              type="range"
+              min="0"
+              max={walletChips}
+              step="10"
+              value={Math.min(rebuyAmount, walletChips)}
+              onChange={(e) => setRebuyAmount(Number(e.target.value))}
+              disabled={rebuyLoading || walletChips <= 0}
+            />
+
+            <div className="busted-rebuy-amount">Recarga seleccionada: {Math.min(rebuyAmount, walletChips).toLocaleString()} PK</div>
+
+            {walletChips < tableBuyIn && (
+              <div className="busted-rebuy-warning">
+                No tienes saldo suficiente para sentarte de nuevo en esta mesa.
+              </div>
+            )}
+
+            {rebuyError && <div className="busted-rebuy-error">{rebuyError}</div>}
+
+            <div className="busted-rebuy-actions">
+              <button
+                className="btn-rebuy-secondary"
+                onClick={() => setShowBustedRebuyModal(false)}
+                disabled={rebuyLoading}
+              >
+                Seguir como espectador
+              </button>
+              <button
+                className="btn-rebuy-primary"
+                onClick={handleConfirmRebuy}
+                disabled={rebuyLoading || walletChips < tableBuyIn}
+              >
+                {rebuyLoading ? 'Recargando...' : 'Recargar y volver a jugar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header con información de la mesa */}
       <div className="table-header">
         <button className="btn-back" onClick={handleLeaveTable}>
@@ -698,6 +805,8 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
         sidePots={pokerGame.sidePots}
         currentUserIndex={currentUserIndex}
         currentPlayerIndex={pokerGame.currentPlayerTurn}
+        keepVisibleUserId={user?.id}
+        keepVisibleWhenSittingOut={Boolean(winnerPopupData || showBustedRebuyModal)}
       />
         );
       })()}

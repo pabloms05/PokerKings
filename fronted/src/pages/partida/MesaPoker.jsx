@@ -18,7 +18,9 @@ function PokerTable({
   sidePots = [],
   currentPlayerId = null,
   currentUserIndex = null,
-  currentPlayerIndex = null
+  currentPlayerIndex = null,
+  keepVisibleUserId = null,
+  keepVisibleWhenSittingOut = false
 }) {
   // Estado para rastrear qué cartas ya fueron reveladas
   const [revealedCards, setRevealedCards] = useState([]);
@@ -172,7 +174,12 @@ function PokerTable({
         // Calcular el índice original del jugador que debería estar en esta posición
         const originalIndex = (currentUserIndex + i - offset + players.length) % players.length;
         const originalPlayer = players[originalIndex];
-        displayedPlayers[i] = originalPlayer?.isSittingOut ? null : originalPlayer;
+        const keepVisible = (
+          !!originalPlayer?.isSittingOut
+          && keepVisibleWhenSittingOut
+          && String(originalPlayer?.userId || '') === String(keepVisibleUserId || '')
+        );
+        displayedPlayers[i] = (originalPlayer?.isSittingOut && !keepVisible) ? null : originalPlayer;
         playerIndexMap[i] = originalIndex;
       } else {
         displayedPlayers[i] = null;
