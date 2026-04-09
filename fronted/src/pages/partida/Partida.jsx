@@ -8,28 +8,28 @@ import { gameSocket } from '../../servicios/socketJuego';
 import { socketService } from '../../servicios/socketBase';
 import './Partida.css';
 
-function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUpdateUser: alActualizarUsuario }) {
-  const MAXIMO_CARACTERES_CHAT = 300;
-  const [jugadores, setJugadores] = useState([]);
-  const [mostrarMenu, setMostrarMenu] = useState(false);
-  const [esEspectador, setEsEspectador] = useState(false);
-  const [mostrarModalInvitacion, setMostrarModalInvitacion] = useState(false);
-  const [amigosSeleccionados, setAmigosSeleccionados] = useState([]);
-  const [amigos, setAmigos] = useState([]);
-  const [cargandoAmigos, setCargandoAmigos] = useState(false);
-  const [cargando, setCargando] = useState(false);
-  const [errorVista, setErrorVista] = useState(null);
-  const [ultimaManoMostrada, setUltimaManoMostrada] = useState(null);
-  const [datosPopupGanador, setDatosPopupGanador] = useState(null);
-  const [retrasoEspectadorHasta, setRetrasoEspectadorHasta] = useState(0);
-  const [vistaCompacta, setVistaCompacta] = useState(window.innerWidth < 900);
-  const [chatAbierto, setChatAbierto] = useState(false);
-  const [mensajesChat, setMensajesChat] = useState([]);
-  const [entradaChat, setEntradaChat] = useState('');
-  const [enviandoChat, setEnviandoChat] = useState(false);
-  const [contadorNoLeidosChat, setContadorNoLeidosChat] = useState(0);
-  const referenciaFinChat = useRef(null);
-  const referenciaAmigos = useRef([]);
+function TablePage({ table, user, onNavigate, onUpdateUser }) {
+  const CHAT_MAX_LENGTH = 300;
+  const [players, setPlayers] = useState([]);
+  const [showMenu, setShowMenu] = useState(false);
+  const [isSpectator, setIsSpectator] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [selectedFriends, setSelectedFriends] = useState([]);
+  const [friends, setFriends] = useState([]);
+  const [friendsLoading, setFriendsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [lastShownHandOver, setLastShownHandOver] = useState(null);
+  const [winnerPopupData, setWinnerPopupData] = useState(null);
+  const [spectatorDelayUntil, setSpectatorDelayUntil] = useState(0);
+  const [isCompact, setIsCompact] = useState(window.innerWidth < 900);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [sendingChat, setSendingChat] = useState(false);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+  const chatBottomRef = useRef(null);
+  const friendsRef = useRef([]);
 
   // Detectar tamaño de pantalla para colapsar botones
   useEffect(() => {
@@ -143,7 +143,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
   }, [mostrarModalInvitacion]);
 
   // Usar el hook de juego de póker (conectado con backend)
-  const juegoPoker = useJuegoPoker(usuario);
+  const pokerGame = usePokerGame(user);
 
   const refrescarSaldoUsuario = async () => {
     if (!usuario?.id || !alActualizarUsuario) return;
@@ -172,12 +172,12 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
   }, [juegoPoker.players, usuario?.id, retrasoEspectadorHasta]);
 
   useEffect(() => {
-    if (juegoPoker.lastHandResult) {
-      const claveIds = (juegoPoker.lastHandResult.winnerIds || []).join(',');
-      const claveMano = `${claveIds || juegoPoker.lastHandResult.winnerId}-${juegoPoker.lastHandResult.potWon}`;
-      if (claveMano !== ultimaManoMostrada) {
-        const ganadores = juegoPoker.lastHandResult.winners || [];
-        const yoGane = (juegoPoker.lastHandResult.winnerIds || []).includes(usuario?.id) || juegoPoker.lastHandResult.winnerId === usuario?.id;
+    if (pokerGame.lastHandResult) {
+      const idsKey = (pokerGame.lastHandResult.winnerIds || []).join(',');
+      const key = `${idsKey || pokerGame.lastHandResult.winnerId}-${pokerGame.lastHandResult.potWon}`;
+      if (key !== lastShownHandOver) {
+        const winners = pokerGame.lastHandResult.winners || [];
+        const meWon = (pokerGame.lastHandResult.winnerIds || []).includes(user?.id) || pokerGame.lastHandResult.winnerId === user?.id;
 
         setDatosPopupGanador({
           winnerName: ganadores.length > 1
@@ -199,7 +199,10 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
           setRetrasoEspectadorHasta(hasta);
           setEsEspectador(false);
 
-          toast.error('Te has quedado sin fichas. Pasarás a modo espectador para la siguiente mano.');
+          const defaultRebuy = Math.min(Math.max(0, Number(user?.chips) || 0), tableBuyIn);
+          setRebuyAmount(defaultRebuy);
+          setRebuyError('');
+          setShowBustedRebuyModal(true);
 
           setTimeout(() => {
             setEsEspectador(true);
@@ -209,12 +212,12 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
         setUltimaManoMostrada(claveMano);
       }
     }
-  }, [juegoPoker.lastHandResult, juegoPoker.players, ultimaManoMostrada, usuario?.id]);
+  }, [pokerGame.lastHandResult, pokerGame.players, lastShownHandOver, user?.id]);
 
   // Inicializar el juego desde el backend
   useEffect(() => {
-    const inicializarJuego = async () => {
-      if (!mesa || !usuario) return;
+    const initializeGame = async () => {
+      if (!table || !user) return;
 
       try {
         setCargando(true);
@@ -277,7 +280,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
         gameSocket.leaveTable(mesa.id);
       }
     };
-  }, [mesa, usuario]);
+  }, [table, user]);
 
   // Manejar levantarse (modo espectador)
   const manejarLevantarse = async () => {
@@ -328,7 +331,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
   };
 
   // Manejar volver a sentarse
-  const manejarSentarse = async () => {
+  const handleSitDown = async () => {
     try {
       if (mesa && usuario) {
         // Re-unirse a la sala de WebSocket (por si se había desconectado)
@@ -349,11 +352,45 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
         }
         await refrescarSaldoUsuario();
       }
-      setEsEspectador(false);
-      setMostrarMenu(false);
+      setIsSpectator(false);
+      setShowMenu(false);
       console.log('🪡 Usuario volvió a sentarse en la mesa');
+      return true;
     } catch (err) {
       console.error('Error al volver a sentarse:', err);
+      const apiError = err?.response?.data;
+      const message = apiError?.code === 'INSUFFICIENT_CHIPS'
+        ? `No tienes fichas suficientes para recargar. Necesitas ${tableBuyIn.toLocaleString()} PK y tienes ${Math.max(0, Number(apiError?.availableChips ?? user?.chips ?? 0)).toLocaleString()} PK.`
+        : (apiError?.error || apiError?.message || 'No se pudo recargar asiento en la mesa.');
+
+      if (fromRebuyModal) {
+        setRebuyError(message);
+      }
+      toast.error(message);
+      return false;
+    }
+  };
+
+  const handleConfirmRebuy = async () => {
+    setRebuyError('');
+    const available = Math.max(0, Number(user?.chips) || 0);
+    const selected = Math.max(0, Number(rebuyAmount) || 0);
+
+    if (selected > available) {
+      setRebuyError('La cantidad de recarga no puede ser mayor que tus fichas disponibles.');
+      return;
+    }
+
+    if (selected < tableBuyIn) {
+      setRebuyError(`Esta mesa requiere un buy-in minimo de ${tableBuyIn.toLocaleString()} PK para volver a sentarte.`);
+      return;
+    }
+
+    setRebuyLoading(true);
+    try {
+      await handleSitDown({ fromRebuyModal: true });
+    } finally {
+      setRebuyLoading(false);
     }
   };
 
@@ -568,6 +605,60 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
         </div>
       )}
 
+      {showBustedRebuyModal && (
+        <div className="busted-rebuy-overlay">
+          <div className="busted-rebuy-modal">
+            <h3>Te has quedado sin fichas</h3>
+            <p className="busted-rebuy-text">
+              Te quedas como espectador hasta que recargues. Ajusta la recarga desde tus fichas totales.
+            </p>
+
+            <div className="busted-rebuy-row">
+              <span>En cartera: {walletChips.toLocaleString()} PK</span>
+              <span>Buy-in mesa: {tableBuyIn.toLocaleString()} PK</span>
+            </div>
+
+            <input
+              className="busted-rebuy-slider"
+              type="range"
+              min="0"
+              max={walletChips}
+              step="10"
+              value={Math.min(rebuyAmount, walletChips)}
+              onChange={(e) => setRebuyAmount(Number(e.target.value))}
+              disabled={rebuyLoading || walletChips <= 0}
+            />
+
+            <div className="busted-rebuy-amount">Recarga seleccionada: {Math.min(rebuyAmount, walletChips).toLocaleString()} PK</div>
+
+            {walletChips < tableBuyIn && (
+              <div className="busted-rebuy-warning">
+                No tienes saldo suficiente para sentarte de nuevo en esta mesa.
+              </div>
+            )}
+
+            {rebuyError && <div className="busted-rebuy-error">{rebuyError}</div>}
+
+            <div className="busted-rebuy-actions">
+              <button
+                className="btn-rebuy-secondary"
+                onClick={() => setShowBustedRebuyModal(false)}
+                disabled={rebuyLoading}
+              >
+                Seguir como espectador
+              </button>
+              <button
+                className="btn-rebuy-primary"
+                onClick={handleConfirmRebuy}
+                disabled={rebuyLoading || walletChips < tableBuyIn}
+              >
+                {rebuyLoading ? 'Recargando...' : 'Recargar y volver a jugar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header con información de la mesa */}
       <div className="table-header">
         <button className="btn-back" onClick={manejarSalirMesa}>
@@ -684,20 +775,20 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
         const jugadoresMesa = juegoPoker.players.length > 0 ? juegoPoker.players : jugadores;
         const indiceUsuarioActual = jugadoresMesa.findIndex((jugador) => jugador?.userId === usuario?.id);
         return (
-      <MesaPoker
-        maxPlayers={mesa.maxPlayers}
-        players={jugadoresMesa}
-        currentPlayerId={usuario?.id || usuario?.username} // ID del usuario actual
-        tableColor={mesa.tableColor}
-        dealerPosition={juegoPoker.dealerPosition}
-        smallBlindPosition={juegoPoker.smallBlindPosition}
-        bigBlindPosition={juegoPoker.bigBlindPosition}
-        communityCards={juegoPoker.communityCards}
-        gamePhase={juegoPoker.gamePhase}
-        pot={juegoPoker.pot}
-        sidePots={juegoPoker.sidePots}
-        currentUserIndex={indiceUsuarioActual}
-        currentPlayerIndex={juegoPoker.currentPlayerTurn}
+      <PokerTable 
+        maxPlayers={table.maxPlayers}
+        players={tablePlayers}
+        currentPlayerId={user?.id || user?.username} // ID del usuario actual
+        tableColor={table.tableColor}
+        dealerPosition={pokerGame.dealerPosition}
+        smallBlindPosition={pokerGame.smallBlindPosition}
+        bigBlindPosition={pokerGame.bigBlindPosition}
+        communityCards={pokerGame.communityCards}
+        gamePhase={pokerGame.gamePhase}
+        pot={pokerGame.pot}
+        sidePots={pokerGame.sidePots}
+        currentUserIndex={currentUserIndex}
+        currentPlayerIndex={pokerGame.currentPlayerTurn}
       />
         );
       })()}

@@ -5,20 +5,20 @@ import './MesaPoker.css';
 const BASE_WIDTH = 1100;
 const BASE_HEIGHT = 700;
 
-function MesaPoker({
-  maxPlayers: maxJugadores = 6,
-  players: jugadores = [],
-  tableColor: colorMesa = '#1a4d2e',
-  dealerPosition: posicionDealer = null,
-  smallBlindPosition: posicionCiegaPequena = null,
-  bigBlindPosition: posicionCiegaGrande = null,
-  communityCards: cartasComunitarias = [],
-  gamePhase: faseJuego = 'waiting',
-  pot: bote = 0,
-  sidePots: botesLaterales = [],
-  currentPlayerId: idJugadorActual = null,
-  currentUserIndex: indiceUsuarioActual = null,
-  currentPlayerIndex: indiceTurnoActual = null
+function PokerTable({ 
+  maxPlayers = 6, 
+  players = [], 
+  tableColor = '#1a4d2e',
+  dealerPosition = null,
+  smallBlindPosition = null,
+  bigBlindPosition = null,
+  communityCards = [],
+  gamePhase = 'waiting',
+  pot = 0,
+  sidePots = [],
+  currentPlayerId = null,
+  currentUserIndex = null,
+  currentPlayerIndex = null
 }) {
   // Estado para rastrear qué cartas ya fueron reveladas
   const [cartasReveladas, setCartasReveladas] = useState([]);
@@ -170,10 +170,10 @@ function MesaPoker({
     for (let i = 0; i < maxJugadores; i++) {
       if (i < jugadores.length) {
         // Calcular el índice original del jugador que debería estar en esta posición
-        const indiceOriginal = (indiceUsuarioActual + i - desplazamiento + jugadores.length) % jugadores.length;
-        const jugadorOriginal = jugadores[indiceOriginal];
-        jugadoresMostrados[i] = jugadorOriginal?.isSittingOut ? null : jugadorOriginal;
-        mapaIndicesJugadores[i] = indiceOriginal;
+        const originalIndex = (currentUserIndex + i - offset + players.length) % players.length;
+        const originalPlayer = players[originalIndex];
+        displayedPlayers[i] = originalPlayer?.isSittingOut ? null : originalPlayer;
+        playerIndexMap[i] = originalIndex;
       } else {
         jugadoresMostrados[i] = null;
         mapaIndicesJugadores[i] = null;
