@@ -4,6 +4,21 @@ import { gameAPI } from '../../servicios/api';
 
 const TURN_DURATION_SECONDS = 45;
 
+const normalizeMinRaise = (incomingMinRaise, incomingCurrentBet) => {
+  const minRaiseNum = Number(incomingMinRaise);
+  const currentBetNum = Number(incomingCurrentBet);
+
+  if (Number.isFinite(minRaiseNum) && minRaiseNum > 0) {
+    return Math.floor(minRaiseNum);
+  }
+
+  if (Number.isFinite(currentBetNum) && currentBetNum > 0) {
+    return Math.floor(currentBetNum);
+  }
+
+  return 1;
+};
+
 /**
  * Custom hook for managing poker game state
  * Integrado con backend a través de WebSocket
@@ -65,8 +80,9 @@ const usePokerGame = (user) => {
         setPot(gameState.pot || 0);
         setSidePots(gameState.sidePots || []);
         setCommunityCards(gameState.communityCards || []);
-        setCurrentBet(gameState.currentBet || 0);
-        setMinRaise(gameState.minRaise || 0);
+        const normalizedCurrentBet = Number(gameState.currentBet) || 0;
+        setCurrentBet(normalizedCurrentBet);
+        setMinRaise(normalizeMinRaise(gameState.minRaise, normalizedCurrentBet));
         setDealerPosition(gameState.dealerIndex || 0);
         setSmallBlindPosition(gameState.smallBlindIndex ?? 0);
         setBigBlindPosition(gameState.bigBlindIndex ?? 0);
@@ -226,8 +242,9 @@ const usePokerGame = (user) => {
           setPot(next.pot || 0);
           setSidePots(next.sidePots || []);
           setCommunityCards(next.communityCards || []);
-          setCurrentBet(next.currentBet || 0);
-          setMinRaise(next.minRaise || 0);
+          const normalizedCurrentBet = Number(next.currentBet) || 0;
+          setCurrentBet(normalizedCurrentBet);
+          setMinRaise(normalizeMinRaise(next.minRaise, normalizedCurrentBet));
           setDealerPosition(next.dealerIndex || 0);
           setSmallBlindPosition(next.smallBlindIndex ?? 0);
           setBigBlindPosition(next.bigBlindIndex ?? 0);
@@ -348,12 +365,13 @@ const usePokerGame = (user) => {
   const currentPlayerState = players[playerIndex];
   const committed = parseInt(currentPlayerState?.betInPhase ?? playerBet) || 0;
   const currentBetNum = parseInt(currentBet) || 0;
+  const effectiveMinRaise = Math.max(1, parseInt(minRaise) || (currentBetNum > 0 ? currentBetNum : 1));
   const isMyTurn = currentPlayerTurn === playerIndex;
   const isPreflop = gamePhase === 'preflop' || gamePhase === 'pre-flop';
   const isBigBlind = playerIndex === bigBlindPosition;
   let canCheck = isMyTurn && committed >= currentBetNum && !playerHasFolded;
   const canCall = isMyTurn && currentBetNum > committed && !playerHasFolded;
-  const canRaise = isMyTurn && playerChips > (currentBetNum - committed + minRaise) && !playerHasFolded;
+  const canRaise = isMyTurn && playerChips > (currentBetNum - committed + effectiveMinRaise) && !playerHasFolded;
   const canFold = isMyTurn && !playerHasFolded;
   const canAllIn = isMyTurn && playerChips > 0 && !playerHasFolded;
 

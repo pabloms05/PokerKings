@@ -19,8 +19,12 @@ const BettingActions = React.memo(function BettingActions({
   onRaise,
   onAllIn
 }) {
-  const minAllowedRaise = Math.max(0, Math.min(minRaise, playerChips));
-  const maxAllowedRaise = Math.max(minAllowedRaise, playerChips);
+  const safePlayerChips = Math.max(0, Number(playerChips) || 0);
+  const safeCurrentBet = Math.max(0, Number(currentBet) || 0);
+  const safeMinRaise = Math.max(0, Number(minRaise) || 0);
+  const defaultRaiseAmount = safeCurrentBet > 0 ? safeCurrentBet : 1;
+  const minAllowedRaise = Math.min(safePlayerChips, safeMinRaise > 0 ? safeMinRaise : defaultRaiseAmount);
+  const maxAllowedRaise = safePlayerChips;
   const [raiseAmount, setRaiseAmount] = useState(minAllowedRaise);
   const [showRaiseSlider, setShowRaiseSlider] = useState(false);
 
@@ -32,6 +36,12 @@ const BettingActions = React.memo(function BettingActions({
     });
   }, [minAllowedRaise, maxAllowedRaise]);
 
+  useEffect(() => {
+    if (showRaiseSlider) {
+      setRaiseAmount(minAllowedRaise);
+    }
+  }, [showRaiseSlider, minAllowedRaise]);
+
   const decreaseRaiseAmount = () => {
     setRaiseAmount((prev) => Math.max(minAllowedRaise, prev - 1));
   };
@@ -41,6 +51,10 @@ const BettingActions = React.memo(function BettingActions({
   };
 
   const handleRaise = () => {
+    if (!isPlayerTurn || !canRaise || raiseAmount <= 0) {
+      return;
+    }
+
     if (raiseAmount >= minAllowedRaise && raiseAmount <= maxAllowedRaise) {
       onRaise(raiseAmount);
       setShowRaiseSlider(false);
@@ -51,8 +65,6 @@ const BettingActions = React.memo(function BettingActions({
   const handleAllIn = () => {
     onAllIn(playerChips);
   };
-
-  console.log('🎮 BettingActions Render:', { isPlayerTurn, canCheck, canCall, canRaise, canFold });
 
   return (
     <div className={`betting-actions-container${!isPlayerTurn ? ' disabled' : ''}`}>
@@ -112,7 +124,10 @@ const BettingActions = React.memo(function BettingActions({
           {/* Botón 4: Subir (Raise) */}
           <button
             className="btn-action btn-raise"
-            onClick={() => setShowRaiseSlider(true)}
+            onClick={() => {
+              setRaiseAmount(minAllowedRaise);
+              setShowRaiseSlider(true);
+            }}
             disabled={!isPlayerTurn || !canRaise}
             title={!canRaise ? 'No puedes subir ahora' : 'Subir'}
           >
