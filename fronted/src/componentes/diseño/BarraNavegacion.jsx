@@ -39,6 +39,11 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
     if (onNavigate) onNavigate('inicio');
   };
 
+  // Función para ir al lobby de mesas
+  const handleMesas = () => {
+    if (onNavigate) onNavigate('mesas');
+  };
+
   // Función para cerrar sesión
   const handleCerrarSesion = () => {
     // Cerrar cualquier toast de confirmación previo
@@ -119,7 +124,14 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
                 </button>
               </li>
 
-              {/* 2. Tienda */}
+              {/* 2. Mesas Disponibles */}
+              <li className="nav-item">
+                <button className="nav-link btn btn-link" onClick={handleMesas}>
+                  🎮 Mesas
+                </button>
+              </li>
+
+              {/* 3. Tienda */}
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link nav-tienda"
@@ -129,7 +141,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
                 </button>
               </li>
 
-              {/* 3. Trofeos */}
+              {/* 4. Trofeos */}
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link"
@@ -139,7 +151,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
                 </button>
               </li>
 
-              {/* 4. Misiones Diarias */}
+              {/* 5. Misiones Diarias */}
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link"
@@ -149,7 +161,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
                 </button>
               </li>
 
-              {/* 4. Amigos */}
+              {/* 6. Amigos */}
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link"
@@ -159,7 +171,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
                 </button>
               </li>
 
-              {/* 5. Invitaciones */}
+              {/* 7. Invitaciones */}
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link"
@@ -169,7 +181,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
                 </button>
               </li>
 
-              {/* 6. Mi Cuenta */}
+              {/* 8. Mi Cuenta */}
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link"
@@ -179,7 +191,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
                 </button>
               </li>
 
-              {/* 7. Cerrar Sesión */}
+              {/* 9. Cerrar Sesión */}
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link text-danger"
