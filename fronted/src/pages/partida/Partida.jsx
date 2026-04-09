@@ -3,12 +3,12 @@ import toast from 'react-hot-toast';
 import PokerTable from './MesaPoker';
 import BettingActions from './AccionesApuesta';
 import usePokerGame from './useJuegoPoker';
-import { gameAPI, friendAPI } from '../../servicios/api';
+import { gameAPI, friendAPI, userAPI } from '../../servicios/api';
 import { gameSocket } from '../../servicios/socketJuego';
 import { socketService } from '../../servicios/socketBase';
 import './Partida.css';
 
-function TablePage({ table, user, onNavigate }) {
+function TablePage({ table, user, onNavigate, onUpdateUser }) {
   const CHAT_MAX_LENGTH = 300;
   const [players, setPlayers] = useState([]);
   const [showMenu, setShowMenu] = useState(false);
@@ -145,6 +145,18 @@ function TablePage({ table, user, onNavigate }) {
   // Usar el hook de juego de póker (conectado con backend)
   const pokerGame = usePokerGame(user);
 
+  const refreshUserBalance = async () => {
+    if (!user?.id || !onUpdateUser) return;
+
+    try {
+      const response = await userAPI.getUserById(user.id);
+      const freshUser = { ...user, ...response?.data, chips: Number(response?.data?.chips ?? user.chips ?? 0) };
+      onUpdateUser(freshUser);
+    } catch (error) {
+      console.warn('No se pudo refrescar saldo de usuario:', error?.message || error);
+    }
+  };
+
   // Sincronizar jugadores desde el backend
   useEffect(() => {
     if (pokerGame.players && pokerGame.players.length > 0) {
@@ -242,6 +254,7 @@ function TablePage({ table, user, onNavigate }) {
           
           // El hook usePokerGame recibirá actualizaciones de todo el estado via WebSocket
           console.log('✅ Juego iniciado/unido:', gameId);
+          await refreshUserBalance();
         } else {
           console.error('⚠️ No se recibió ID de juego del backend', response.data);
         }
@@ -272,6 +285,8 @@ function TablePage({ table, user, onNavigate }) {
       if (pokerGame.gameId) {
         await gameAPI.leaveGame(pokerGame.gameId, user?.id);
       }
+
+      await refreshUserBalance();
 
       if (table?.id) {
         // Fuerza sync global del estado de la mesa para los demás clientes,
@@ -332,6 +347,7 @@ function TablePage({ table, user, onNavigate }) {
             setPlayers(gameData.players);
           }
         }
+        await refreshUserBalance();
       }
       setIsSpectator(false);
       setShowMenu(false);
@@ -348,6 +364,7 @@ function TablePage({ table, user, onNavigate }) {
         if (pokerGame.gameId) {
           await gameAPI.leaveGame(pokerGame.gameId, user?.id);
         }
+        await refreshUserBalance();
         if (table?.id) {
           gameSocket.leaveTable(table.id);
         }
