@@ -1,81 +1,87 @@
 import React, { useState } from 'react';
 import { authService } from '../../servicios/autenticacion';
-import AvatarSelector from './SelectorAvatar';
+import SelectorAvatar from './SelectorAvatar';
 import './Registro.css';
 
-function Register({ onRegisterSuccess, onSwitchToLogin }) {
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+function Registro({ alRegistroExitoso, alCambiarALogin }) {
+  const [datosFormulario, setDatosFormulario] = useState({
+    nombreUsuario: '',
+    correo: '',
+    contrasena: '',
+    confirmarContrasena: '',
     avatar: '🎮'
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState({});
+  const [cargando, setCargando] = useState(false);
+  const [errorRegistro, setErrorRegistro] = useState('');
+  const [erroresCampos, setErroresCampos] = useState({});
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
+  const manejarCambio = (evento) => {
+    const { name, value } = evento.target;
+    setDatosFormulario({
+      ...datosFormulario,
       [name]: value
     });
 
     // Limpiar error general y de campo cuando el usuario corrige inputs.
-    if (error) setError('');
-    if (fieldErrors[name]) {
-      setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+    if (errorRegistro) setErrorRegistro('');
+    if (erroresCampos[name]) {
+      setErroresCampos((previo) => ({ ...previo, [name]: undefined }));
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setFieldErrors({});
+  const manejarEnvio = async (evento) => {
+    evento.preventDefault();
+    setErrorRegistro('');
+    setErroresCampos({});
 
     // Validaciones
-    if (formData.password !== formData.confirmPassword) {
-      setError('Las contraseñas no coinciden');
+    if (datosFormulario.contrasena !== datosFormulario.confirmarContrasena) {
+      setErrorRegistro('Las contraseñas no coinciden');
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
+    if (datosFormulario.contrasena.length < 6) {
+      setErrorRegistro('La contraseña debe tener al menos 6 caracteres');
       return;
     }
 
-    if (formData.username.length < 3) {
-      setError('El nombre de usuario debe tener al menos 3 caracteres');
+    if (datosFormulario.nombreUsuario.length < 3) {
+      setErrorRegistro('El nombre de usuario debe tener al menos 3 caracteres');
       return;
     }
 
-    setLoading(true);
+    setCargando(true);
 
     try {
       // Llamar al servicio de registro
-      const result = await authService.register(
-        formData.username.trim(),
-        formData.email.trim(),
-        formData.password,
-        formData.avatar
+      const resultado = await authService.register(
+        datosFormulario.nombreUsuario.trim(),
+        datosFormulario.correo.trim(),
+        datosFormulario.contrasena,
+        datosFormulario.avatar
       );
 
-      if (result.success) {
-        console.log('✅ Registro exitoso:', result.user);
+      if (resultado.success) {
+        console.log('✅ Registro exitoso:', resultado.user);
         // Notificar al componente padre
-        if (onRegisterSuccess) {
-          onRegisterSuccess(result.user);
+        if (alRegistroExitoso) {
+          alRegistroExitoso(resultado.user);
         }
       } else {
-        setError(result.error || 'Error al crear la cuenta');
-        setFieldErrors(result.fieldErrors || {});
+        setErrorRegistro(resultado.error || 'Error al crear la cuenta');
+        const erroresBackend = resultado.fieldErrors || {};
+        setErroresCampos({
+          nombreUsuario: erroresBackend.username,
+          correo: erroresBackend.email,
+          contrasena: erroresBackend.password,
+          confirmarContrasena: erroresBackend.confirmPassword
+        });
       }
     } catch (err) {
       console.error('Error en registro:', err);
-      setError('Error de conexión con el servidor');
+      setErrorRegistro('Error de conexión con el servidor');
     } finally {
-      setLoading(false);
+      setCargando(false);
     }
   };
 
@@ -92,17 +98,17 @@ function Register({ onRegisterSuccess, onSwitchToLogin }) {
         </h2>
 
         {/* Mostrar error si existe */}
-        {error && (
+        {errorRegistro && (
           <div className="register-error">
-            ⚠️ {error}
+            ⚠️ {errorRegistro}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="register-form">
+        <form onSubmit={manejarEnvio} className="register-form">
           {/* Selector de avatar */}
-          <AvatarSelector 
-            selectedAvatar={formData.avatar}
-            onSelectAvatar={(avatar) => setFormData(prev => ({ ...prev, avatar }))}
+          <SelectorAvatar
+            avatarSeleccionado={datosFormulario.avatar}
+            alSeleccionarAvatar={(avatar) => setDatosFormulario((previo) => ({ ...previo, avatar }))}
           />
 
           {/* Nombre de usuario */}
@@ -113,20 +119,20 @@ function Register({ onRegisterSuccess, onSwitchToLogin }) {
             <input
               type="text"
               className="form-input"
-              name="username"
+              name="nombreUsuario"
               placeholder="Ej: PokerKing123"
-              value={formData.username}
-              onChange={handleChange}
+              value={datosFormulario.nombreUsuario}
+              onChange={manejarCambio}
               required
-              disabled={loading}
+              disabled={cargando}
               minLength="3"
             />
             <small className="form-hint">
               Mínimo 3 caracteres. Debe ser unico.
             </small>
-            {fieldErrors.username && (
+            {erroresCampos.nombreUsuario && (
               <small className="form-hint" style={{ color: '#ff6b6b' }}>
-                {fieldErrors.username}
+                {erroresCampos.nombreUsuario}
               </small>
             )}
           </div>
@@ -139,16 +145,16 @@ function Register({ onRegisterSuccess, onSwitchToLogin }) {
             <input
               type="email"
               className="form-input"
-              name="email"
+              name="correo"
               placeholder="tu@email.com"
-              value={formData.email}
-              onChange={handleChange}
+              value={datosFormulario.correo}
+              onChange={manejarCambio}
               required
-              disabled={loading}
+              disabled={cargando}
             />
-            {fieldErrors.email && (
+            {erroresCampos.correo && (
               <small className="form-hint" style={{ color: '#ff6b6b' }}>
-                {fieldErrors.email}
+                {erroresCampos.correo}
               </small>
             )}
           </div>
@@ -161,12 +167,12 @@ function Register({ onRegisterSuccess, onSwitchToLogin }) {
             <input
               type="password"
               className="form-input"
-              name="password"
+              name="contrasena"
               placeholder="••••••••"
-              value={formData.password}
-              onChange={handleChange}
+              value={datosFormulario.contrasena}
+              onChange={manejarCambio}
               required
-              disabled={loading}
+              disabled={cargando}
               minLength="6"
             />
             <small className="form-hint">
@@ -182,12 +188,12 @@ function Register({ onRegisterSuccess, onSwitchToLogin }) {
             <input
               type="password"
               className="form-input"
-              name="confirmPassword"
+              name="confirmarContrasena"
               placeholder="••••••••"
-              value={formData.confirmPassword}
-              onChange={handleChange}
+              value={datosFormulario.confirmarContrasena}
+              onChange={manejarCambio}
               required
-              disabled={loading}
+              disabled={cargando}
               minLength="6"
             />
           </div>
@@ -196,9 +202,9 @@ function Register({ onRegisterSuccess, onSwitchToLogin }) {
           <button
             type="submit"
             className="btn-register"
-            disabled={loading}
+            disabled={cargando}
           >
-            {loading ? (
+            {cargando ? (
               <>
                 <span className="spinner"></span>
                 Creando cuenta...
@@ -214,8 +220,8 @@ function Register({ onRegisterSuccess, onSwitchToLogin }) {
           <p className="footer-text">¿Ya tienes cuenta?</p>
           <button
             className="btn-switch"
-            onClick={onSwitchToLogin}
-            disabled={loading}
+            onClick={alCambiarALogin}
+            disabled={cargando}
           >
             Iniciar Sesión
           </button>
@@ -232,4 +238,4 @@ function Register({ onRegisterSuccess, onSwitchToLogin }) {
   );
 }
 
-export default Register;
+export default Registro;

@@ -59,33 +59,33 @@ const PAQUETES = [
   },
 ];
 
-function Tienda({ user, onNavigate, onUpdateUser }) {
-  const [comprando, setComprando] = useState(null);
+function PaginaTienda({ usuario, alNavegar, alActualizarUsuario }) {
+  const [paqueteEnCompra, setPaqueteEnCompra] = useState(null);
 
-  const handleComprar = async (paquete) => {
-    setComprando(paquete.id);
+  const manejarComprar = async (paquete) => {
+    setPaqueteEnCompra(paquete.id);
 
     // Simulación de procesamiento de pago (aquí iría la integración real)
     await new Promise((res) => setTimeout(res, 1200));
 
-    const nuevasFichas = Number(user?.chips || 0) + paquete.fichas;
-    const usuarioActualizado = { ...user, chips: nuevasFichas };
+    const nuevasFichas = Number(usuario?.chips || 0) + paquete.fichas;
+    const usuarioActualizado = { ...usuario, chips: nuevasFichas };
 
-    onUpdateUser(usuarioActualizado);
+    alActualizarUsuario(usuarioActualizado);
 
     toast.success(
       `🎉 ¡Compraste ${paquete.fichas.toLocaleString()} PK! Saldo: ${nuevasFichas.toLocaleString()} PK`,
       { duration: 4000 }
     );
 
-    setComprando(null);
+    setPaqueteEnCompra(null);
   };
 
   return (
     <div className="tienda-page">
       {/* Header */}
       <div className="tienda-header">
-        <button className="btn-back" onClick={() => onNavigate('inicio')}>
+        <button className="btn-back" onClick={() => alNavegar('inicio')}>
           ← Volver
         </button>
         <div className="tienda-titulo">
@@ -94,7 +94,7 @@ function Tienda({ user, onNavigate, onUpdateUser }) {
         </div>
         <div className="saldo-actual">
           <span className="saldo-label">Tu saldo</span>
-          <span className="saldo-valor">🪙 {Number(user?.chips || 0).toLocaleString()} PK</span>
+          <span className="saldo-valor">🪙 {Number(usuario?.chips || 0).toLocaleString()} PK</span>
         </div>
       </div>
 
@@ -130,10 +130,10 @@ function Tienda({ user, onNavigate, onUpdateUser }) {
 
             <button
               className="btn-comprar"
-              onClick={() => handleComprar(paquete)}
-              disabled={comprando === paquete.id}
+              onClick={() => manejarComprar(paquete)}
+              disabled={paqueteEnCompra === paquete.id}
             >
-              {comprando === paquete.id ? (
+              {paqueteEnCompra === paquete.id ? (
                 <span className="comprando-spinner">⏳ Procesando...</span>
               ) : (
                 '💳 Comprar'
@@ -152,4 +152,4 @@ function Tienda({ user, onNavigate, onUpdateUser }) {
   );
 }
 
-export default Tienda;
+export default PaginaTienda;

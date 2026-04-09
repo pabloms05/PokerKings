@@ -3,44 +3,44 @@ import { tableAPI } from '../../servicios/api';
 import { socketService } from '../../servicios/socketBase';
 import './Mesas.css';
 
-function LobbyPage({ onNavigate, onJoinTable, user }) {
-  const [tables, setTables] = useState([]);
-  const [loading, setLoading] = useState(true);
+function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: usuario }) {
+  const [mesas, setMesas] = useState([]);
+  const [cargando, setCargando] = useState(true);
 
   // Cargar mesas desde el backend
   useEffect(() => {
-    const loadTables = async () => {
+    const cargarMesas = async () => {
       try {
-        const response = await tableAPI.getAllTables();
-        setTables(response.data || []);
+        const respuesta = await tableAPI.getAllTables();
+        setMesas(respuesta.data || []);
       } catch (err) {
         console.error('Error cargando mesas:', err);
       } finally {
-        setLoading(false);
+        setCargando(false);
       }
     };
     
-    loadTables();
+    cargarMesas();
 
     const token = sessionStorage.getItem('token') || localStorage.getItem('token');
     const socket = socketService.getSocket() || socketService.connect(token);
 
-    const onLobbyTables = (incomingTables) => {
-      setTables(incomingTables || []);
-      setLoading(false);
+    const alMesasLobby = (mesasEntrantes) => {
+      setMesas(mesasEntrantes || []);
+      setCargando(false);
     };
 
     if (socket) {
       socket.emit('lobby:join');
-      socket.on('lobby:tables', onLobbyTables);
-      socket.on('lobby:update', onLobbyTables);
+      socket.on('lobby:tables', alMesasLobby);
+      socket.on('lobby:update', alMesasLobby);
     }
     
     return () => {
       if (socket) {
         socket.emit('lobby:leave');
-        socket.off('lobby:tables', onLobbyTables);
-        socket.off('lobby:update', onLobbyTables);
+        socket.off('lobby:tables', alMesasLobby);
+        socket.off('lobby:update', alMesasLobby);
       }
     };
   }, []);
@@ -48,21 +48,21 @@ function LobbyPage({ onNavigate, onJoinTable, user }) {
   return (
     <div className="lobby-page">
       <div className="lobby-header">
-        <button className="btn-back" onClick={() => onNavigate('inicio')}>
+        <button className="btn-back" onClick={() => alNavegar('inicio')}>
           ← Volver
         </button>
         <h1 className="lobby-title">🎮 Mesas Disponibles</h1>
         <div className="lobby-stats">
-          <span className="stat-badge">🟢 {tables.length} mesa{tables.length !== 1 ? 's' : ''} disponible{tables.length !== 1 ? 's' : ''}</span>
+          <span className="stat-badge">🟢 {mesas.length} mesa{mesas.length !== 1 ? 's' : ''} disponible{mesas.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
 
-      {loading ? (
+      {cargando ? (
         <div className="loading-message">Cargando mesas...</div>
-      ) : tables.length === 0 ? (
+      ) : mesas.length === 0 ? (
         <div className="empty-message">
           <p>No hay mesas disponibles</p>
-          <button onClick={() => onNavigate('crear')} className="btn-create-first">
+          <button onClick={() => alNavegar('crear')} className="btn-create-first">
             + Crear Primera Mesa
           </button>
         </div>
@@ -71,23 +71,23 @@ function LobbyPage({ onNavigate, onJoinTable, user }) {
           {/* Scroll horizontal de mesas */}
           <div className="tables-scroll-container">
             <div className="tables-scroll">
-              {tables.map(table => (
+              {mesas.map((mesa) => (
                 (() => {
-                  const currentPlayers = table.currentPlayers || 0;
-                  const isFull = currentPlayers >= table.maxPlayers;
-                  const buyIn = Number(table.bigBlind || 0) * 100;
-                  const userChips = Number(user?.chips || 0);
-                  const insufficientChips = buyIn > 0 && userChips < buyIn;
-                  const disabled = isFull || insufficientChips;
+                  const jugadoresActuales = mesa.currentPlayers || 0;
+                  const estaLlena = jugadoresActuales >= mesa.maxPlayers;
+                  const compraEntrada = Number(mesa.bigBlind || 0) * 100;
+                  const fichasUsuario = Number(usuario?.chips || 0);
+                  const fichasInsuficientes = compraEntrada > 0 && fichasUsuario < compraEntrada;
+                  const deshabilitada = estaLlena || fichasInsuficientes;
 
                   return (
-                <div key={table.id} className="table-card">
+                <div key={mesa.id} className="table-card">
                   <div className="table-card-header">
                     <h3 className="table-name">
-                      {table.isPrivate ? '🔒' : '🔓'} {table.name}
+                      {mesa.isPrivate ? '🔒' : '🔓'} {mesa.name}
                     </h3>
-                    <span className={`table-status ${table.status}`}>
-                      {table.status === 'playing' ? '🎲 Jugando' : '⏳ Esperando'}
+                    <span className={`table-status ${mesa.status}`}>
+                      {mesa.status === 'playing' ? '🎲 Jugando' : '⏳ Esperando'}
                     </span>
                   </div>
 
@@ -96,7 +96,7 @@ function LobbyPage({ onNavigate, onJoinTable, user }) {
                     <div className="mini-table">
                       <img src="/assets/images/mesa-poker.png" alt="Mesa" />
                       <div className="player-count">
-                        {table.currentPlayers || 0}/{table.maxPlayers}
+                        {mesa.currentPlayers || 0}/{mesa.maxPlayers}
                       </div>
                     </div>
 
@@ -104,36 +104,36 @@ function LobbyPage({ onNavigate, onJoinTable, user }) {
                     <div className="table-info">
                       <div className="info-row">
                         <span className="info-label">👥 Jugadores:</span>
-                        <span className="info-value">{currentPlayers}/{table.maxPlayers}</span>
+                        <span className="info-value">{jugadoresActuales}/{mesa.maxPlayers}</span>
                       </div>
                       <div className="info-row">
                         <span className="info-label">💰 Ciegas:</span>
-                        <span className="info-value">{table.smallBlind}/{table.bigBlind}</span>
+                        <span className="info-value">{mesa.smallBlind}/{mesa.bigBlind}</span>
                       </div>
                       <div className="info-row">
                         <span className="info-label">🎟️ Buy-in:</span>
-                        <span className="info-value">{buyIn}</span>
+                        <span className="info-value">{compraEntrada}</span>
                       </div>
-                      {table.botsCount > 0 && (
+                      {mesa.botsCount > 0 && (
                         <div className="info-row">
                           <span className="info-label">🤖 Bots:</span>
-                          <span className="info-value">{table.botsCount}</span>
+                          <span className="info-value">{mesa.botsCount}</span>
                         </div>
                       )}
                       <div className="info-row">
                         <span className="info-label">🔐 Tipo:</span>
-                        <span className="info-value">{table.isPrivate ? 'Privada' : 'Pública'}</span>
+                        <span className="info-value">{mesa.isPrivate ? 'Privada' : 'Pública'}</span>
                       </div>
                     </div>
 
                     {/* Botón unirse */}
                     <button 
-                      className={`btn-join ${disabled ? 'disabled' : ''}`}
-                      onClick={() => !disabled && onJoinTable(table)}
-                      disabled={disabled}
-                      title={insufficientChips ? `Necesitas ${buyIn} fichas para entrar` : undefined}
+                      className={`btn-join ${deshabilitada ? 'disabled' : ''}`}
+                      onClick={() => !deshabilitada && alUnirseMesa(mesa)}
+                      disabled={deshabilitada}
+                      title={fichasInsuficientes ? `Necesitas ${compraEntrada} fichas para entrar` : undefined}
                     >
-                      {isFull ? '🔒 Mesa Llena' : insufficientChips ? '💸 Fichas Insuficientes' : '▶ Unirse'}
+                      {estaLlena ? '🔒 Mesa Llena' : fichasInsuficientes ? '💸 Fichas Insuficientes' : '▶ Unirse'}
                     </button>
                   </div>
                 </div>
@@ -153,4 +153,4 @@ function LobbyPage({ onNavigate, onJoinTable, user }) {
   );
 }
 
-export default LobbyPage;
+export default PaginaMesas;

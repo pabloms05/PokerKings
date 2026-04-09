@@ -1,74 +1,74 @@
 import React, { useEffect, useState } from 'react';
 import './AccionesApuesta.css';
 
-// FIX: Memoización para evitar re-renders innecesarios
-const BettingActions = React.memo(function BettingActions({ 
-  playerChips = 0, 
-  currentBet = 0, 
-  minRaise = 0,
-  pot = 0,
-  isPlayerTurn = false,
-  canCheck = false,
-  canCall = false,
-  canRaise = false,
-  canFold = false,
-  turnTimeRemaining = 45, // FIX: Recibir tiempo restante como prop
-  onFold,
-  onCheck,
-  onCall,
-  onRaise,
-  onAllIn
+// FIX: Memoizacion para evitar re-renders innecesarios
+const AccionesApuesta = React.memo(function AccionesApuesta({
+  playerChips: fichasJugador = 0,
+  currentBet: apuestaActual = 0,
+  minRaise: subidaMinima = 0,
+  pot: bote = 0,
+  isPlayerTurn: esTurnoJugador = false,
+  canCheck: puedePasar = false,
+  canCall: puedeIgualar = false,
+  canRaise: puedeSubir = false,
+  canFold: puedeRetirarse = false,
+  turnTimeRemaining: tiempoRestanteTurno = 45, // FIX: Recibir tiempo restante como prop
+  onFold: alRetirarse,
+  onCheck: alPasar,
+  onCall: alIgualar,
+  onRaise: alSubir,
+  onAllIn: alIrAllIn
 }) {
-  const safePlayerChips = Math.max(0, Number(playerChips) || 0);
-  const safeCurrentBet = Math.max(0, Number(currentBet) || 0);
-  const safeMinRaise = Math.max(0, Number(minRaise) || 0);
-  const defaultRaiseAmount = safeCurrentBet > 0 ? safeCurrentBet : 1;
-  const minAllowedRaise = Math.min(safePlayerChips, safeMinRaise > 0 ? safeMinRaise : defaultRaiseAmount);
-  const maxAllowedRaise = safePlayerChips;
-  const [raiseAmount, setRaiseAmount] = useState(minAllowedRaise);
-  const [showRaiseSlider, setShowRaiseSlider] = useState(false);
+  const fichasJugadorSeguras = Math.max(0, Number(fichasJugador) || 0);
+  const apuestaActualSegura = Math.max(0, Number(apuestaActual) || 0);
+  const subidaMinimaSegura = Math.max(0, Number(subidaMinima) || 0);
+  const subidaPorDefecto = apuestaActualSegura > 0 ? apuestaActualSegura : 1;
+  const subidaMinimaPermitida = Math.min(fichasJugadorSeguras, subidaMinimaSegura > 0 ? subidaMinimaSegura : subidaPorDefecto);
+  const subidaMaximaPermitida = fichasJugadorSeguras;
+  const [montoSubida, setMontoSubida] = useState(subidaMinimaPermitida);
+  const [mostrarSliderSubida, setMostrarSliderSubida] = useState(false);
 
   useEffect(() => {
-    setRaiseAmount((prev) => {
-      if (prev < minAllowedRaise) return minAllowedRaise;
-      if (prev > maxAllowedRaise) return maxAllowedRaise;
-      return prev;
+    setMontoSubida((previo) => {
+      if (previo < subidaMinimaPermitida) return subidaMinimaPermitida;
+      if (previo > subidaMaximaPermitida) return subidaMaximaPermitida;
+      return previo;
     });
-  }, [minAllowedRaise, maxAllowedRaise]);
+  }, [subidaMinimaPermitida, subidaMaximaPermitida]);
 
   useEffect(() => {
-    if (showRaiseSlider) {
-      setRaiseAmount(minAllowedRaise);
+    if (mostrarSliderSubida) {
+      setMontoSubida(subidaMinimaPermitida);
     }
-  }, [showRaiseSlider, minAllowedRaise]);
+  }, [mostrarSliderSubida, subidaMinimaPermitida]);
 
-  const decreaseRaiseAmount = () => {
-    setRaiseAmount((prev) => Math.max(minAllowedRaise, prev - 1));
+  const disminuirMontoSubida = () => {
+    setMontoSubida((previo) => Math.max(subidaMinimaPermitida, previo - 1));
   };
 
-  const increaseRaiseAmount = () => {
-    setRaiseAmount((prev) => Math.min(maxAllowedRaise, prev + 1));
+  const aumentarMontoSubida = () => {
+    setMontoSubida((previo) => Math.min(subidaMaximaPermitida, previo + 1));
   };
 
-  const handleRaise = () => {
-    if (!isPlayerTurn || !canRaise || raiseAmount <= 0) {
+  const manejarSubida = () => {
+    if (!esTurnoJugador || !puedeSubir || montoSubida <= 0) {
       return;
     }
 
-    if (raiseAmount >= minAllowedRaise && raiseAmount <= maxAllowedRaise) {
-      onRaise(raiseAmount);
-      setShowRaiseSlider(false);
-      setRaiseAmount(minAllowedRaise);
+    if (montoSubida >= subidaMinimaPermitida && montoSubida <= subidaMaximaPermitida) {
+      alSubir(montoSubida);
+      setMostrarSliderSubida(false);
+      setMontoSubida(subidaMinimaPermitida);
     }
   };
 
-  const handleAllIn = () => {
-    onAllIn(playerChips);
+  const manejarAllIn = () => {
+    alIrAllIn(fichasJugador);
   };
 
   return (
-    <div className={`betting-actions-container${!isPlayerTurn ? ' disabled' : ''}`}>
-      {!isPlayerTurn && (
+    <div className={`betting-actions-container${!esTurnoJugador ? ' disabled' : ''}`}>
+      {!esTurnoJugador && (
         <div className="waiting-turn">
           <span className="waiting-icon">⏳</span>
           <span>Esperando tu turno...</span>
@@ -77,15 +77,15 @@ const BettingActions = React.memo(function BettingActions({
       <div className="betting-info">
         <div className="info-item">
           <span className="info-label">💰 Bote:</span>
-          <span className="info-value">{pot.toLocaleString()} PK</span>
+          <span className="info-value">{bote.toLocaleString()} PK</span>
         </div>
         <div className="info-item">
           <span className="info-label">💵 Apuesta actual:</span>
-          <span className="info-value">{currentBet.toLocaleString()} PK</span>
+          <span className="info-value">{apuestaActual.toLocaleString()} PK</span>
         </div>
         <div className="info-item">
           <span className="info-label">🪙 Tus fichas:</span>
-          <span className="info-value">{playerChips.toLocaleString()} PK</span>
+          <span className="info-value">{fichasJugador.toLocaleString()} PK</span>
         </div>
       </div>
 
@@ -94,9 +94,9 @@ const BettingActions = React.memo(function BettingActions({
           {/* Botón 1: No ir (Fold) */}
           <button
             className="btn-action btn-fold"
-            onClick={onFold}
-            disabled={!isPlayerTurn || !canFold}
-            title={!canFold ? 'No puedes hacer fold ahora' : 'No ir'}
+            onClick={alRetirarse}
+            disabled={!esTurnoJugador || !puedeRetirarse}
+            title={!puedeRetirarse ? 'No puedes hacer fold ahora' : 'No ir'}
           >
             🚫 No ir
           </button>
@@ -104,9 +104,9 @@ const BettingActions = React.memo(function BettingActions({
           {/* Botón 2: Pasar (Check) - SIEMPRE VISIBLE */}
           <button 
             className="btn-action btn-check" 
-            onClick={onCheck}
-            disabled={!isPlayerTurn || !canCheck}
-            title={!canCheck ? "No puedes pasar, debes igualar la apuesta" : "Pasar sin apostar"}
+            onClick={alPasar}
+            disabled={!esTurnoJugador || !puedePasar}
+            title={!puedePasar ? "No puedes pasar, debes igualar la apuesta" : "Pasar sin apostar"}
           >
             ✅ Pasar
           </button>
@@ -114,81 +114,81 @@ const BettingActions = React.memo(function BettingActions({
           {/* Botón 3: Igualar (Call) */}
           <button
             className="btn-action btn-call"
-            onClick={onCall}
-            disabled={!isPlayerTurn || !canCall}
-            title={!canCall ? 'No puedes igualar ahora' : 'Igualar'}
+            onClick={alIgualar}
+            disabled={!esTurnoJugador || !puedeIgualar}
+            title={!puedeIgualar ? 'No puedes igualar ahora' : 'Igualar'}
           >
-            💵 Igualar {currentBet.toLocaleString()} PK
+            💵 Igualar {apuestaActual.toLocaleString()} PK
           </button>
           
           {/* Botón 4: Subir (Raise) */}
           <button
             className="btn-action btn-raise"
             onClick={() => {
-              setRaiseAmount(minAllowedRaise);
-              setShowRaiseSlider(true);
+              setMontoSubida(subidaMinimaPermitida);
+              setMostrarSliderSubida(true);
             }}
-            disabled={!isPlayerTurn || !canRaise}
-            title={!canRaise ? 'No puedes subir ahora' : 'Subir'}
+            disabled={!esTurnoJugador || !puedeSubir}
+            title={!puedeSubir ? 'No puedes subir ahora' : 'Subir'}
           >
             💸 Subir
           </button>
         </div>
 
       {/* Slider de subida */}
-      {showRaiseSlider && (
+      {mostrarSliderSubida && (
         <div className="raise-slider-container">
           <div className="slider-header">
             <span>💸 Cantidad a subir</span>
-            <button className="btn-close-slider" onClick={() => setShowRaiseSlider(false)}>✕</button>
+            <button className="btn-close-slider" onClick={() => setMostrarSliderSubida(false)}>✕</button>
           </div>
           <div className="slider-amount">
             <span className="amount-label">Monto:</span>
-            <span className="amount-value">{raiseAmount.toLocaleString()} PK</span>
+            <span className="amount-value">{montoSubida.toLocaleString()} PK</span>
           </div>
           <div className="raise-slider-controls">
             <button
               type="button"
               className="slider-step-btn"
-              onClick={decreaseRaiseAmount}
-              disabled={raiseAmount <= minAllowedRaise}
+              onClick={disminuirMontoSubida}
+              disabled={montoSubida <= subidaMinimaPermitida}
               aria-label="Disminuir apuesta"
             >
               -
             </button>
             <input
               type="range"
-              min={minAllowedRaise}
-              max={maxAllowedRaise}
+              min={subidaMinimaPermitida}
+              max={subidaMaximaPermitida}
               step={1}
-              value={raiseAmount}
-              onChange={(e) => setRaiseAmount(parseInt(e.target.value, 10))}
+              value={montoSubida}
+              onChange={(e) => setMontoSubida(parseInt(e.target.value, 10))}
               className="raise-slider"
             />
             <button
               type="button"
               className="slider-step-btn"
-              onClick={increaseRaiseAmount}
-              disabled={raiseAmount >= maxAllowedRaise}
+              onClick={aumentarMontoSubida}
+              disabled={montoSubida >= subidaMaximaPermitida}
               aria-label="Aumentar apuesta"
             >
               +
             </button>
           </div>
           <div className="slider-limits">
-            <span>Min: {minAllowedRaise.toLocaleString()}</span>
-            <span>Max: {maxAllowedRaise.toLocaleString()}</span>
+            <span>Min: {subidaMinimaPermitida.toLocaleString()}</span>
+            <span>Max: {subidaMaximaPermitida.toLocaleString()}</span>
           </div>
           <div className="slider-actions">
-            <button className="btn-action btn-cancel" onClick={() => setShowRaiseSlider(false)}>
+            <button className="btn-action btn-cancel" onClick={() => setMostrarSliderSubida(false)}>
               Cancelar
             </button>
-            {playerChips > 0 && (
-              <button className="btn-action btn-allin" onClick={handleAllIn}>
+            {fichasJugador > 0 && (
+              <button className="btn-action btn-allin" onClick={manejarAllIn}>
                 🔥 All-In
               </button>
             )}
-            <button className="btn-action btn-confirm" onClick={handleRaise}>
+            <button className="btn-action btn-confirm" onClick={manejarSubida}>
               ✅ Confirmar Subida
             </button>
           </div>
@@ -201,13 +201,13 @@ const BettingActions = React.memo(function BettingActions({
           {/* FIX: Timer dinámico basado en turnTimeRemaining */}
           <div 
             className="timer-fill" 
-            style={{ width: `${(Math.max(0, turnTimeRemaining) / 45) * 100}%` }}
+            style={{ width: `${(Math.max(0, tiempoRestanteTurno) / 45) * 100}%` }}
           ></div>
         </div>
-        <div className="timer-seconds">{turnTimeRemaining}s</div>
+        <div className="timer-seconds">{tiempoRestanteTurno}s</div>
       </div>
     </div>
   );
 });
 
-export default BettingActions;
+export default AccionesApuesta;

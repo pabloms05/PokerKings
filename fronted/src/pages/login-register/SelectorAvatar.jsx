@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './SelectorAvatar.css';
 
-const AVATAR_OPTIONS = [
+const OPCIONES_AVATAR = [
   '😀', '😎', '🤩', '😇', '🥳',
   '🤠', '🤡', '👽', '👻', '💀',
   '🎃', '🤓', '😈', '🥶', '🤯',
@@ -13,12 +13,12 @@ const AVATAR_OPTIONS = [
   '👵', '🧔', '👨‍🦰', '👨‍🦱', '👨‍🦳'
 ];
 
-function AvatarSelector({ selectedAvatar, onSelectAvatar }) {
-  const [isOpen, setIsOpen] = useState(false);
+function SelectorAvatar({ avatarSeleccionado, alSeleccionarAvatar }) {
+  const [estaAbierto, setEstaAbierto] = useState(false);
 
-  const handleSelectAvatar = (avatar) => {
-    onSelectAvatar(avatar);
-    setIsOpen(false);
+  const manejarSeleccionAvatar = (avatar) => {
+    alSeleccionarAvatar(avatar);
+    setEstaAbierto(false);
   };
 
   return (
@@ -27,32 +27,32 @@ function AvatarSelector({ selectedAvatar, onSelectAvatar }) {
         😊 Elige tu Avatar
       </label>
       
-      <div className="avatar-display" onClick={() => setIsOpen(!isOpen)}>
+      <div className="avatar-display" onClick={() => setEstaAbierto(!estaAbierto)}>
         <div className="selected-avatar">
-          <span className="avatar-emoji">{selectedAvatar || '👤'}</span>
+          <span className="avatar-emoji">{avatarSeleccionado || '👤'}</span>
         </div>
         <span className="avatar-label">Haz clic para cambiar</span>
       </div>
 
-      {isOpen && (
+      {estaAbierto && (
         <div className="avatar-gallery">
           <div className="gallery-header">
             <span>Selecciona tu avatar</span>
             <button 
               type="button" 
               className="btn-close-gallery"
-              onClick={() => setIsOpen(false)}
+              onClick={() => setEstaAbierto(false)}
             >
               ✕
             </button>
           </div>
           <div className="avatar-grid">
-            {AVATAR_OPTIONS.map((avatar, index) => (
+            {OPCIONES_AVATAR.map((avatar, indice) => (
               <button
-                key={index}
+                key={indice}
                 type="button"
-                className={`avatar-option ${selectedAvatar === avatar ? 'selected' : ''}`}
-                onClick={() => handleSelectAvatar(avatar)}
+                className={`avatar-option ${avatarSeleccionado === avatar ? 'selected' : ''}`}
+                onClick={() => manejarSeleccionAvatar(avatar)}
               >
                 {avatar}
               </button>
@@ -64,4 +64,4 @@ function AvatarSelector({ selectedAvatar, onSelectAvatar }) {
   );
 }
 
-export default AvatarSelector;
+export default SelectorAvatar;

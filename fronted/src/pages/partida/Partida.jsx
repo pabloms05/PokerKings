@@ -1,157 +1,157 @@
 import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
-import PokerTable from './MesaPoker';
-import BettingActions from './AccionesApuesta';
-import usePokerGame from './useJuegoPoker';
+import MesaPoker from './MesaPoker';
+import AccionesApuesta from './AccionesApuesta';
+import useJuegoPoker from './useJuegoPoker';
 import { gameAPI, friendAPI, userAPI } from '../../servicios/api';
 import { gameSocket } from '../../servicios/socketJuego';
 import { socketService } from '../../servicios/socketBase';
 import './Partida.css';
 
-function TablePage({ table, user, onNavigate, onUpdateUser }) {
-  const CHAT_MAX_LENGTH = 300;
-  const [players, setPlayers] = useState([]);
-  const [showMenu, setShowMenu] = useState(false);
-  const [isSpectator, setIsSpectator] = useState(false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [selectedFriends, setSelectedFriends] = useState([]);
-  const [friends, setFriends] = useState([]);
-  const [friendsLoading, setFriendsLoading] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [lastShownHandOver, setLastShownHandOver] = useState(null);
-  const [winnerPopupData, setWinnerPopupData] = useState(null);
-  const [spectatorDelayUntil, setSpectatorDelayUntil] = useState(0);
-  const [isCompact, setIsCompact] = useState(window.innerWidth < 900);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState([]);
-  const [chatInput, setChatInput] = useState('');
-  const [sendingChat, setSendingChat] = useState(false);
-  const [chatUnreadCount, setChatUnreadCount] = useState(0);
-  const chatBottomRef = useRef(null);
-  const friendsRef = useRef([]);
+function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUpdateUser: alActualizarUsuario }) {
+  const MAXIMO_CARACTERES_CHAT = 300;
+  const [jugadores, setJugadores] = useState([]);
+  const [mostrarMenu, setMostrarMenu] = useState(false);
+  const [esEspectador, setEsEspectador] = useState(false);
+  const [mostrarModalInvitacion, setMostrarModalInvitacion] = useState(false);
+  const [amigosSeleccionados, setAmigosSeleccionados] = useState([]);
+  const [amigos, setAmigos] = useState([]);
+  const [cargandoAmigos, setCargandoAmigos] = useState(false);
+  const [cargando, setCargando] = useState(false);
+  const [errorVista, setErrorVista] = useState(null);
+  const [ultimaManoMostrada, setUltimaManoMostrada] = useState(null);
+  const [datosPopupGanador, setDatosPopupGanador] = useState(null);
+  const [retrasoEspectadorHasta, setRetrasoEspectadorHasta] = useState(0);
+  const [vistaCompacta, setVistaCompacta] = useState(window.innerWidth < 900);
+  const [chatAbierto, setChatAbierto] = useState(false);
+  const [mensajesChat, setMensajesChat] = useState([]);
+  const [entradaChat, setEntradaChat] = useState('');
+  const [enviandoChat, setEnviandoChat] = useState(false);
+  const [contadorNoLeidosChat, setContadorNoLeidosChat] = useState(0);
+  const referenciaFinChat = useRef(null);
+  const referenciaAmigos = useRef([]);
 
   // Detectar tamaño de pantalla para colapsar botones
   useEffect(() => {
-    const handleResize = () => setIsCompact(window.innerWidth < 900);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const manejarResize = () => setVistaCompacta(window.innerWidth < 900);
+    window.addEventListener('resize', manejarResize);
+    return () => window.removeEventListener('resize', manejarResize);
   }, []);
 
   useEffect(() => {
-    friendsRef.current = friends;
-  }, [friends]);
+    referenciaAmigos.current = amigos;
+  }, [amigos]);
 
   useEffect(() => {
-    if (!table?.id) return;
+    if (!mesa?.id) return;
 
-    const onChatHistory = (payload) => {
-      if (String(payload?.tableId) !== String(table.id)) return;
-      setChatMessages(Array.isArray(payload?.messages) ? payload.messages : []);
+    const alHistorialChat = (payload) => {
+      if (String(payload?.tableId) !== String(mesa.id)) return;
+      setMensajesChat(Array.isArray(payload?.messages) ? payload.messages : []);
     };
 
-    const onChatMessage = (chatMessage) => {
-      if (String(chatMessage?.tableId) !== String(table.id)) return;
-      setChatMessages((prev) => [...prev, chatMessage].slice(-120));
-      if (!isChatOpen && String(chatMessage?.userId) !== String(user?.id)) {
-        setChatUnreadCount((prev) => prev + 1);
+    const alMensajeChat = (mensajeChat) => {
+      if (String(mensajeChat?.tableId) !== String(mesa.id)) return;
+      setMensajesChat((previo) => [...previo, mensajeChat].slice(-120));
+      if (!chatAbierto && String(mensajeChat?.userId) !== String(usuario?.id)) {
+        setContadorNoLeidosChat((previo) => previo + 1);
       }
     };
 
-    gameSocket.on('tableChatHistory', onChatHistory);
-    gameSocket.on('tableChatMessage', onChatMessage);
+    gameSocket.on('tableChatHistory', alHistorialChat);
+    gameSocket.on('tableChatMessage', alMensajeChat);
 
-    gameSocket.requestTableChatHistory(table.id);
+    gameSocket.requestTableChatHistory(mesa.id);
 
     return () => {
-      gameSocket.off('tableChatHistory', onChatHistory);
-      gameSocket.off('tableChatMessage', onChatMessage);
+      gameSocket.off('tableChatHistory', alHistorialChat);
+      gameSocket.off('tableChatMessage', alMensajeChat);
     };
-  }, [table?.id, isChatOpen, user?.id]);
+  }, [mesa?.id, chatAbierto, usuario?.id]);
 
   useEffect(() => {
-    if (isChatOpen && chatUnreadCount > 0) {
-      setChatUnreadCount(0);
+    if (chatAbierto && contadorNoLeidosChat > 0) {
+      setContadorNoLeidosChat(0);
     }
-  }, [isChatOpen, chatUnreadCount]);
+  }, [chatAbierto, contadorNoLeidosChat]);
 
   useEffect(() => {
-    if (!isChatOpen) return;
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [chatMessages, isChatOpen]);
+    if (!chatAbierto) return;
+    referenciaFinChat.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [mensajesChat, chatAbierto]);
 
   useEffect(() => {
-    if (!showInviteModal) return;
+    if (!mostrarModalInvitacion) return;
 
-    const onFriendPresence = (payload) => {
-      const friendUserId = String(payload?.userId || '');
-      if (!friendUserId) return;
+    const alPresenciaAmigo = (payload) => {
+      const idUsuarioAmigo = String(payload?.userId || '');
+      if (!idUsuarioAmigo) return;
 
-      setFriends((prev) => prev.map((friend) => (
-        String(friend?.id) === friendUserId
-          ? { ...friend, online: !!payload?.online }
-          : friend
+      setAmigos((previo) => previo.map((amigo) => (
+        String(amigo?.id) === idUsuarioAmigo
+          ? { ...amigo, online: !!payload?.online }
+          : amigo
       )));
     };
 
-    const onPresenceSnapshot = (payload) => {
-      const onlineStatus = payload?.onlineStatus || {};
-      setFriends((prev) => prev.map((friend) => ({
-        ...friend,
-        online: !!onlineStatus[String(friend?.id)]
+    const alSnapshotPresencia = (payload) => {
+      const estadoEnLinea = payload?.onlineStatus || {};
+      setAmigos((previo) => previo.map((amigo) => ({
+        ...amigo,
+        online: !!estadoEnLinea[String(amigo?.id)]
       })));
     };
 
-    socketService.onFriendPresence(onFriendPresence);
-    socketService.onFriendsPresenceSnapshot(onPresenceSnapshot);
+    socketService.onFriendPresence(alPresenciaAmigo);
+    socketService.onFriendsPresenceSnapshot(alSnapshotPresencia);
     socketService.requestFriendsPresenceSnapshot();
 
-    const snapshotIntervalId = setInterval(() => {
+    const idIntervaloSnapshot = setInterval(() => {
       socketService.requestFriendsPresenceSnapshot();
     }, 2000);
 
     return () => {
-      socketService.offFriendPresence(onFriendPresence);
-      socketService.offFriendsPresenceSnapshot(onPresenceSnapshot);
-      clearInterval(snapshotIntervalId);
+      socketService.offFriendPresence(alPresenciaAmigo);
+      socketService.offFriendsPresenceSnapshot(alSnapshotPresencia);
+      clearInterval(idIntervaloSnapshot);
     };
-  }, [showInviteModal]);
+  }, [mostrarModalInvitacion]);
 
   useEffect(() => {
-    if (!showInviteModal) return;
+    if (!mostrarModalInvitacion) return;
 
-    const refreshOnlineStatus = async () => {
-      const friendIds = friendsRef.current.map((friend) => friend?.id).filter(Boolean);
-      if (friendIds.length === 0) return;
+    const refrescarEstadoOnline = async () => {
+      const idsAmigos = referenciaAmigos.current.map((amigo) => amigo?.id).filter(Boolean);
+      if (idsAmigos.length === 0) return;
 
       try {
-        const response = await friendAPI.getOnlineStatus(friendIds);
-        const onlineStatus = response?.data?.onlineStatus || {};
-        setFriends((prev) => prev.map((friend) => ({
-          ...friend,
-          online: !!onlineStatus[String(friend?.id)]
+        const response = await friendAPI.getOnlineStatus(idsAmigos);
+        const estadoEnLinea = response?.data?.onlineStatus || {};
+        setAmigos((previo) => previo.map((amigo) => ({
+          ...amigo,
+          online: !!estadoEnLinea[String(amigo?.id)]
         })));
       } catch (err) {
         console.warn('No se pudo refrescar online-status en vivo:', err?.message || err);
       }
     };
 
-    refreshOnlineStatus();
-    const intervalId = setInterval(refreshOnlineStatus, 1500);
+    refrescarEstadoOnline();
+    const idIntervalo = setInterval(refrescarEstadoOnline, 1500);
 
-    return () => clearInterval(intervalId);
-  }, [showInviteModal]);
+    return () => clearInterval(idIntervalo);
+  }, [mostrarModalInvitacion]);
 
   // Usar el hook de juego de póker (conectado con backend)
-  const pokerGame = usePokerGame(user);
+  const juegoPoker = useJuegoPoker(usuario);
 
-  const refreshUserBalance = async () => {
-    if (!user?.id || !onUpdateUser) return;
+  const refrescarSaldoUsuario = async () => {
+    if (!usuario?.id || !alActualizarUsuario) return;
 
     try {
-      const response = await userAPI.getUserById(user.id);
-      const freshUser = { ...user, ...response?.data, chips: Number(response?.data?.chips ?? user.chips ?? 0) };
-      onUpdateUser(freshUser);
+      const response = await userAPI.getUserById(usuario.id);
+      const usuarioActualizado = { ...usuario, ...response?.data, chips: Number(response?.data?.chips ?? usuario.chips ?? 0) };
+      alActualizarUsuario(usuarioActualizado);
     } catch (error) {
       console.warn('No se pudo refrescar saldo de usuario:', error?.message || error);
     }
@@ -159,71 +159,71 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
 
   // Sincronizar jugadores desde el backend
   useEffect(() => {
-    if (pokerGame.players && pokerGame.players.length > 0) {
-      setPlayers(pokerGame.players);
+    if (juegoPoker.players && juegoPoker.players.length > 0) {
+      setJugadores(juegoPoker.players);
 
-      const me = pokerGame.players.find(p => p.userId === user?.id);
-      if (me) {
-        const delayActive = Date.now() < spectatorDelayUntil;
-        const shouldSpectate = !!me.isSittingOut && !delayActive;
-        setIsSpectator(shouldSpectate);
+      const yo = juegoPoker.players.find((jugador) => jugador.userId === usuario?.id);
+      if (yo) {
+        const retrasoActivo = Date.now() < retrasoEspectadorHasta;
+        const debeEspectar = !!yo.isSittingOut && !retrasoActivo;
+        setEsEspectador(debeEspectar);
       }
     }
-  }, [pokerGame.players, user?.id, spectatorDelayUntil]);
+  }, [juegoPoker.players, usuario?.id, retrasoEspectadorHasta]);
 
   useEffect(() => {
-    if (pokerGame.lastHandResult) {
-      const idsKey = (pokerGame.lastHandResult.winnerIds || []).join(',');
-      const key = `${idsKey || pokerGame.lastHandResult.winnerId}-${pokerGame.lastHandResult.potWon}`;
-      if (key !== lastShownHandOver) {
-        const winners = pokerGame.lastHandResult.winners || [];
-        const meWon = (pokerGame.lastHandResult.winnerIds || []).includes(user?.id) || pokerGame.lastHandResult.winnerId === user?.id;
+    if (juegoPoker.lastHandResult) {
+      const claveIds = (juegoPoker.lastHandResult.winnerIds || []).join(',');
+      const claveMano = `${claveIds || juegoPoker.lastHandResult.winnerId}-${juegoPoker.lastHandResult.potWon}`;
+      if (claveMano !== ultimaManoMostrada) {
+        const ganadores = juegoPoker.lastHandResult.winners || [];
+        const yoGane = (juegoPoker.lastHandResult.winnerIds || []).includes(usuario?.id) || juegoPoker.lastHandResult.winnerId === usuario?.id;
 
-        setWinnerPopupData({
-          winnerName: winners.length > 1
-            ? (winners.map(w => w.username).filter(Boolean).join(', ') || pokerGame.lastHandResult.winnerName || 'Empate')
-            : (pokerGame.lastHandResult.winnerName || winners[0]?.username || 'Desconocido'),
-          potWon: pokerGame.lastHandResult.potWon ?? 0,
-          esTuVictoria: !!meWon
+        setDatosPopupGanador({
+          winnerName: ganadores.length > 1
+            ? (ganadores.map((ganador) => ganador.username).filter(Boolean).join(', ') || juegoPoker.lastHandResult.winnerName || 'Empate')
+            : (juegoPoker.lastHandResult.winnerName || ganadores[0]?.username || 'Desconocido'),
+          potWon: juegoPoker.lastHandResult.potWon ?? 0,
+          esTuVictoria: !!yoGane
         });
 
         setTimeout(() => {
-          setWinnerPopupData(null);
+          setDatosPopupGanador(null);
         }, 3500);
 
-        const meAfterHand = (pokerGame.players || []).find(p => p.userId === user?.id);
-        const busted = !!meAfterHand && ((Number(meAfterHand.chips) || 0) <= 0 || !!meAfterHand.isSittingOut);
-        if (busted) {
+        const yoDespuesDeMano = (juegoPoker.players || []).find((jugador) => jugador.userId === usuario?.id);
+        const eliminado = !!yoDespuesDeMano && ((Number(yoDespuesDeMano.chips) || 0) <= 0 || !!yoDespuesDeMano.isSittingOut);
+        if (eliminado) {
           // Dar tiempo a ver resultado antes de pasar a espectador.
-          const until = Date.now() + 3500;
-          setSpectatorDelayUntil(until);
-          setIsSpectator(false);
+          const hasta = Date.now() + 3500;
+          setRetrasoEspectadorHasta(hasta);
+          setEsEspectador(false);
 
           toast.error('Te has quedado sin fichas. Pasarás a modo espectador para la siguiente mano.');
 
           setTimeout(() => {
-            setIsSpectator(true);
+            setEsEspectador(true);
           }, 3500);
         }
 
-        setLastShownHandOver(key);
+        setUltimaManoMostrada(claveMano);
       }
     }
-  }, [pokerGame.lastHandResult, pokerGame.players, lastShownHandOver, user?.id]);
+  }, [juegoPoker.lastHandResult, juegoPoker.players, ultimaManoMostrada, usuario?.id]);
 
   // Inicializar el juego desde el backend
   useEffect(() => {
-    const initializeGame = async () => {
-      if (!table || !user) return;
+    const inicializarJuego = async () => {
+      if (!mesa || !usuario) return;
 
       try {
-        setLoading(true);
-        setError(null);
+        setCargando(true);
+        setErrorVista(null);
 
         // ESPERAR a unirse a la sala de WebSocket de la mesa ANTES de hacer startGame
-        console.log(`🔌 Uniéndose a sala de WebSocket: table_${table.id}`);
+        console.log(`🔌 Uniendose a sala de WebSocket: table_${mesa.id}`);
         try {
-          await gameSocket.joinTable(table.id);
+          await gameSocket.joinTable(mesa.id);
           console.log(`✅ Socket unido a la sala. Procediendo con startGame...`);
         } catch (socketErr) {
           console.error('⚠️ Error al unirse a WebSocket:', socketErr.message);
@@ -231,69 +231,69 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
         }
 
         // Crear lista de jugadores para el backend
-        const playerIds = [user.id]; // Comenzar con el usuario actual
+        const idsJugadores = [usuario.id]; // Comenzar con el usuario actual
         
         // El backend manejará agregar más jugadores si existen en la mesa
         // Por ahora, solo enviar el usuario actual
         
         // Iniciar el juego en el backend
-        const response = await gameAPI.startGame(table.id, playerIds);
+        const response = await gameAPI.startGame(mesa.id, idsJugadores);
         
         // El backend devuelve response.data.game con el estado del juego
-        const gameData = response.data.game || response.data;
-        const gameId = gameData.id;
+        const datosJuego = response.data.game || response.data;
+        const idJuego = datosJuego.id;
         
-        if (gameId) {
+        if (idJuego) {
           // Guardar el ID del juego
-          pokerGame.setGameId(gameId);
+          juegoPoker.setGameId(idJuego);
 
           // Hidratar estado local inmediatamente con jugadores
-          if (Array.isArray(gameData.players)) {
-            setPlayers(gameData.players);
+          if (Array.isArray(datosJuego.players)) {
+            setJugadores(datosJuego.players);
           }
           
           // El hook usePokerGame recibirá actualizaciones de todo el estado via WebSocket
-          console.log('✅ Juego iniciado/unido:', gameId);
-          await refreshUserBalance();
+          console.log('✅ Juego iniciado/unido:', idJuego);
+          await refrescarSaldoUsuario();
         } else {
           console.error('⚠️ No se recibió ID de juego del backend', response.data);
         }
       } catch (err) {
         console.error('❌ Error al iniciar el juego:', err);
-        setError('No se pudo iniciar el juego. Intenta de nuevo.');
+        setErrorVista('No se pudo iniciar el juego. Intenta de nuevo.');
       } finally {
-        setLoading(false);
+        setCargando(false);
       }
     };
 
     // Esperar un poco antes de inicializar (para que el WebSocket esté listo)
-    const timer = setTimeout(() => {
-      initializeGame();
+    const temporizador = setTimeout(() => {
+      inicializarJuego();
     }, 500);
 
     return () => {
-      clearTimeout(timer);
-      if (table?.id) {
-        gameSocket.leaveTable(table.id);
+      clearTimeout(temporizador);
+      if (mesa?.id) {
+        gameSocket.leaveTable(mesa.id);
       }
     };
-  }, [table, user]);
+  }, [mesa, usuario]);
 
   // Manejar levantarse (modo espectador)
-  const handleStandUp = async () => {
+  const manejarLevantarse = async () => {
     try {
-      if (pokerGame.gameId) {
-        await gameAPI.leaveGame(pokerGame.gameId, user?.id);
+      if (juegoPoker.gameId) {
+        await gameAPI.leaveGame(juegoPoker.gameId, usuario?.id);
       }
 
-      await refreshUserBalance();
+      await refrescarSaldoUsuario();
 
-      if (table?.id) {
+      if (mesa?.id) {
         // Fuerza sync global del estado de la mesa para los demás clientes,
         // y vuelve a unir este cliente como espectador.
-        gameSocket.leaveTable(table.id);
+        gameSocket.leaveTable(mesa.id);
         try {
-          await gameSocket.joinTable(table.id);
+          await gameSocket.joinTable(mesa.id);
         } catch (socketErr) {
           console.warn('⚠️ No se pudo re-unir como espectador tras levantarse:', socketErr.message);
         }
@@ -301,13 +301,13 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
 
       // Mantenerse en la sala de la mesa para recibir estado como espectador.
       // Además, actualizar localmente para que el asiento se libere al instante.
-      pokerGame.setPlayers((prevPlayers) => prevPlayers.map((player) => {
-        if (String(player?.userId) !== String(user?.id)) {
-          return player;
+      juegoPoker.setPlayers((jugadoresPrevios) => jugadoresPrevios.map((jugador) => {
+        if (String(jugador?.userId) !== String(usuario?.id)) {
+          return jugador;
         }
 
         return {
-          ...player,
+          ...jugador,
           isSittingOut: true,
           folded: true,
           hand: null,
@@ -319,8 +319,8 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
         };
       }));
 
-      setIsSpectator(true);
-      setShowMenu(false);
+      setEsEspectador(true);
+      setMostrarMenu(false);
       console.log('👁️ Usuario cambió a modo espectador');
     } catch (err) {
       console.error('Error al cambiar a modo espectador:', err);
@@ -328,29 +328,29 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
   };
 
   // Manejar volver a sentarse
-  const handleSitDown = async () => {
+  const manejarSentarse = async () => {
     try {
-      if (table && user) {
+      if (mesa && usuario) {
         // Re-unirse a la sala de WebSocket (por si se había desconectado)
         try {
-          await gameSocket.joinTable(table.id);
+          await gameSocket.joinTable(mesa.id);
           console.log(`✅ Socket re-unido a la sala. Procediendo con startGame...`);
         } catch (socketErr) {
           console.error('⚠️ Error al re-unirse a WebSocket:', socketErr.message);
         }
 
-        const response = await gameAPI.startGame(table.id, [user.id]);
-        const gameData = response.data?.game || response.data;
-        if (gameData?.id) {
-          pokerGame.setGameId(gameData.id);
-          if (Array.isArray(gameData.players)) {
-            setPlayers(gameData.players);
+        const response = await gameAPI.startGame(mesa.id, [usuario.id]);
+        const datosJuego = response.data?.game || response.data;
+        if (datosJuego?.id) {
+          juegoPoker.setGameId(datosJuego.id);
+          if (Array.isArray(datosJuego.players)) {
+            setJugadores(datosJuego.players);
           }
         }
-        await refreshUserBalance();
+        await refrescarSaldoUsuario();
       }
-      setIsSpectator(false);
-      setShowMenu(false);
+      setEsEspectador(false);
+      setMostrarMenu(false);
       console.log('🪡 Usuario volvió a sentarse en la mesa');
     } catch (err) {
       console.error('Error al volver a sentarse:', err);
@@ -358,21 +358,21 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
   };
 
   // Manejar abandonar partida
-  const handleLeaveTable = async () => {
-    const performLeave = async () => {
+  const manejarSalirMesa = async () => {
+    const ejecutarSalida = async () => {
       try {
-        if (pokerGame.gameId) {
-          await gameAPI.leaveGame(pokerGame.gameId, user?.id);
+        if (juegoPoker.gameId) {
+          await gameAPI.leaveGame(juegoPoker.gameId, usuario?.id);
         }
-        await refreshUserBalance();
-        if (table?.id) {
-          gameSocket.leaveTable(table.id);
+        await refrescarSaldoUsuario();
+        if (mesa?.id) {
+          gameSocket.leaveTable(mesa.id);
         }
       } catch (leaveErr) {
         console.error('Error abandonando el juego:', leaveErr);
       }
       toast.success('Has abandonado la mesa', { id: 'leave-success' });
-      onNavigate('inicio');
+      alNavegar('inicio');
     };
 
     toast.dismiss('leave-confirm');
@@ -384,7 +384,7 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
           <button
             onClick={async () => {
               toast.dismiss(t.id);
-              await performLeave();
+              await ejecutarSalida();
             }}
             style={{
               background: '#c41e3a',
@@ -417,114 +417,114 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
     ), { duration: 5000, id: 'leave-confirm' });
   };
 
-  const handleSendChat = async (event) => {
-    event.preventDefault();
-    const text = chatInput.trim();
-    if (!text || !table?.id || sendingChat) return;
+  const manejarEnviarChat = async (evento) => {
+    evento.preventDefault();
+    const texto = entradaChat.trim();
+    if (!texto || !mesa?.id || enviandoChat) return;
 
-    if (text.length > CHAT_MAX_LENGTH) {
-      toast.error(`El mensaje no puede superar ${CHAT_MAX_LENGTH} caracteres`);
+    if (texto.length > MAXIMO_CARACTERES_CHAT) {
+      toast.error(`El mensaje no puede superar ${MAXIMO_CARACTERES_CHAT} caracteres`);
       return;
     }
 
     try {
-      setSendingChat(true);
-      await gameSocket.sendTableChatMessage(table.id, text);
-      setChatInput('');
+      setEnviandoChat(true);
+      await gameSocket.sendTableChatMessage(mesa.id, texto);
+      setEntradaChat('');
     } catch (error) {
       toast.error(error?.message || 'No se pudo enviar el mensaje');
     } finally {
-      setSendingChat(false);
+      setEnviandoChat(false);
     }
   };
 
   // Manejar invitar a un amigo
-  const handleOpenInvite = async () => {
-    setFriendsLoading(true);
+  const manejarAbrirInvitar = async () => {
+    setCargandoAmigos(true);
     try {
       const response = await friendAPI.getFriends();
-      const list = Array.isArray(response?.data) ? response.data : [];
+      const lista = Array.isArray(response?.data) ? response.data : [];
 
-      const friendIds = list.map((f) => f.id).filter(Boolean);
-      let onlineStatus = {};
+      const idsAmigos = lista.map((amigo) => amigo.id).filter(Boolean);
+      let estadoEnLinea = {};
 
-      if (friendIds.length > 0) {
+      if (idsAmigos.length > 0) {
         try {
-          const onlineResponse = await friendAPI.getOnlineStatus(friendIds);
-          onlineStatus = onlineResponse?.data?.onlineStatus || {};
+          const respuestaOnline = await friendAPI.getOnlineStatus(idsAmigos);
+          estadoEnLinea = respuestaOnline?.data?.onlineStatus || {};
         } catch (onlineErr) {
           console.warn('No se pudo consultar estado online de amigos:', onlineErr?.message || onlineErr);
         }
       }
 
-      setFriends(list.map((f) => ({
-        ...f,
-        online: !!onlineStatus[String(f.id)]
+      setAmigos(lista.map((amigo) => ({
+        ...amigo,
+        online: !!estadoEnLinea[String(amigo.id)]
       })));
     } catch (err) {
       console.error('Error cargando amigos:', err);
       toast.error('No se pudo cargar la lista de amigos');
-      setFriends([]);
+      setAmigos([]);
     } finally {
-      setFriendsLoading(false);
+      setCargandoAmigos(false);
     }
-    setShowInviteModal(true);
-    setShowMenu(false);
+    setMostrarModalInvitacion(true);
+    setMostrarMenu(false);
   };
 
   // Manejar selección de amigos
-  const toggleFriendSelection = (friendId) => {
-    setSelectedFriends(prev => 
-      prev.includes(friendId) 
-        ? prev.filter(id => id !== friendId)
-        : [...prev, friendId]
+  const alternarSeleccionAmigo = (idAmigo) => {
+    setAmigosSeleccionados((previo) =>
+      previo.includes(idAmigo)
+        ? previo.filter((id) => id !== idAmigo)
+        : [...previo, idAmigo]
     );
   };
 
   // Enviar invitaciones
-  const handleSendInvites = async () => {
-    if (!pokerGame.gameId) {
+  const manejarEnviarInvitaciones = async () => {
+    if (!juegoPoker.gameId) {
       toast.error('La partida aún no está lista para enviar invitaciones');
       return;
     }
 
-    if (selectedFriends.length === 0) {
+    if (amigosSeleccionados.length === 0) {
       toast.error('Selecciona al menos un amigo para invitar');
       return;
     }
 
     try {
-      const response = await gameAPI.inviteFriends(pokerGame.gameId, selectedFriends);
-      const sent = response?.data?.invitedCount ?? selectedFriends.length;
-      const rejected = (response?.data?.rejectedFriendIds || []).length;
+      const response = await gameAPI.inviteFriends(juegoPoker.gameId, amigosSeleccionados);
+      const enviadas = response?.data?.invitedCount ?? amigosSeleccionados.length;
+      const rechazadas = (response?.data?.rejectedFriendIds || []).length;
 
-      if (sent > 0) {
-        toast.success(`📨 ${sent} invitación${sent > 1 ? 'es' : ''} enviada${sent > 1 ? 's' : ''}`, { id: 'send-invites' });
+      if (enviadas > 0) {
+        toast.success(`📨 ${enviadas} invitación${enviadas > 1 ? 'es' : ''} enviada${enviadas > 1 ? 's' : ''}`, { id: 'send-invites' });
       }
-      if (rejected > 0) {
-        toast.error(`${rejected} invitación${rejected > 1 ? 'es no válidas' : ' no válida'} no se pudo enviar`);
+      if (rechazadas > 0) {
+        toast.error(`${rechazadas} invitación${rechazadas > 1 ? 'es no válidas' : ' no válida'} no se pudo enviar`);
       }
 
-      setShowInviteModal(false);
-      setSelectedFriends([]);
+      setMostrarModalInvitacion(false);
+      setAmigosSeleccionados([]);
     } catch (err) {
       console.error('Error enviando invitaciones:', err);
       toast.error(err?.response?.data?.error || 'No se pudieron enviar las invitaciones');
     }
   };
 
-  if (!table) {
+  if (!mesa) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: '#e0e0e0' }}>
         <h2>Mesa no encontrada</h2>
-        <button className="btn btn-primary" onClick={() => onNavigate('inicio')}>
+        <button className="btn btn-primary" onClick={() => alNavegar('inicio')}>
           Volver al inicio
         </button>
       </div>
     );
   }
 
-  if (!user) {
+  if (!usuario) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: '#e0e0e0' }}>
         <h2>Cargando usuario...</h2>
@@ -533,7 +533,7 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
     );
   }
 
-  if (loading) {
+  if (cargando) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: '#e0e0e0' }}>
         <h2>Iniciando juego...</h2>
@@ -542,12 +542,12 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
     );
   }
 
-  if (error) {
+  if (errorVista) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: '#ff6b6b' }}>
         <h2>Error</h2>
-        <p>{error}</p>
-        <button className="btn btn-primary" onClick={() => onNavigate('mesas')}>
+        <p>{errorVista}</p>
+        <button className="btn btn-primary" onClick={() => alNavegar('mesas')}>
           Volver al lobby
         </button>
       </div>
@@ -557,66 +557,66 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
   return (
     <div className="table-page">
       {/* Popup ganador centrado en pantalla */}
-      {winnerPopupData && (
-        <div className={`winner-popup ${winnerPopupData.esTuVictoria ? 'winner-popup--tuya' : ''}`}>
-          <div className="winner-popup__icono">{winnerPopupData.esTuVictoria ? '🥇' : '🏆'}</div>
+      {datosPopupGanador && (
+        <div className={`winner-popup ${datosPopupGanador.esTuVictoria ? 'winner-popup--tuya' : ''}`}>
+          <div className="winner-popup__icono">{datosPopupGanador.esTuVictoria ? '🥇' : '🏆'}</div>
           <div className="winner-popup__titulo">
-            {winnerPopupData.esTuVictoria ? '¡HAS GANADO!' : 'Ganador de la mano'}
+            {datosPopupGanador.esTuVictoria ? '¡HAS GANADO!' : 'Ganador de la mano'}
           </div>
-          <div className="winner-popup__nombre">{winnerPopupData.winnerName}</div>
-          <div className="winner-popup__bote">+{(winnerPopupData.potWon || 0).toLocaleString()} PK</div>
+          <div className="winner-popup__nombre">{datosPopupGanador.winnerName}</div>
+          <div className="winner-popup__bote">+{(datosPopupGanador.potWon || 0).toLocaleString()} PK</div>
         </div>
       )}
 
       {/* Header con información de la mesa */}
       <div className="table-header">
-        <button className="btn-back" onClick={handleLeaveTable}>
+        <button className="btn-back" onClick={manejarSalirMesa}>
           ← Salir de la mesa
         </button>
         
         <div className="table-info-header">
-          <h2 className="table-title">{table.name}</h2>
+          <h2 className="table-title">{mesa.name}</h2>
           <div className="table-stats">
-            <span className="stat">💰 Ciegas: {table.smallBlind}/{table.bigBlind}</span>
-            <span className="stat">👥 Jugadores: {pokerGame.players.filter(p => p && !p.isSittingOut).length}/{table.maxPlayers}</span>
-            {table.isPrivate && <span className="stat">🔒 Privada</span>}
-            {isSpectator && <span className="stat spectator-badge">👁️ Modo Espectador</span>}
-            <span className="stat">🎮 Fase: {pokerGame.gamePhase}</span>
+            <span className="stat">💰 Ciegas: {mesa.smallBlind}/{mesa.bigBlind}</span>
+            <span className="stat">👥 Jugadores: {juegoPoker.players.filter((jugador) => jugador && !jugador.isSittingOut).length}/{mesa.maxPlayers}</span>
+            {mesa.isPrivate && <span className="stat">🔒 Privada</span>}
+            {esEspectador && <span className="stat spectator-badge">👁️ Modo Espectador</span>}
+            <span className="stat">🎮 Fase: {juegoPoker.gamePhase}</span>
           </div>
         </div>
 
         {/* Botones de menú y chat */}
         <div className="menu-container">
           {/* Chat: visible solo en pantallas grandes */}
-          {!isCompact && (
+          {!vistaCompacta && (
             <button
               className="btn-menu btn-chat"
-              onClick={() => setIsChatOpen((prev) => !prev)}
+              onClick={() => setChatAbierto((previo) => !previo)}
             >
-              🗣️ Chat {chatUnreadCount > 0 ? `(${chatUnreadCount})` : ''}
+              🗣️ Chat {contadorNoLeidosChat > 0 ? `(${contadorNoLeidosChat})` : ''}
             </button>
           )}
 
           <button 
-            className={`btn-menu${isCompact ? ' compact' : ''}`}
-            onClick={() => setShowMenu(!showMenu)}
+            className={`btn-menu${vistaCompacta ? ' compact' : ''}`}
+            onClick={() => setMostrarMenu(!mostrarMenu)}
           >
-            {isCompact ? '☰' : '☰ Menú'}
+            {vistaCompacta ? '☰' : '☰ Menú'}
           </button>
 
-          {showMenu && isCompact && (
-            <div className="menu-backdrop" onClick={() => setShowMenu(false)} />
+          {mostrarMenu && vistaCompacta && (
+            <div className="menu-backdrop" onClick={() => setMostrarMenu(false)} />
           )}
           
           {/* Dropdown del menú */}
-          {showMenu && (
+          {mostrarMenu && (
             <div className="menu-dropdown">
               {/* En modo compacto: Salir y Chat al principio del dropdown */}
-              {isCompact && (
+              {vistaCompacta && (
                 <>
                   <button
                     className="menu-item"
-                    onClick={() => { setShowMenu(false); onNavigate('inicio'); }}
+                    onClick={() => { setMostrarMenu(false); alNavegar('inicio'); }}
                   >
                     <span className="menu-icon">←</span>
                     Salir de la mesa
@@ -625,22 +625,22 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
                   <button
                     className="menu-item"
                     onClick={() => {
-                      setIsChatOpen((prev) => !prev);
-                      setShowMenu(false);
+                      setChatAbierto((previo) => !previo);
+                      setMostrarMenu(false);
                     }}
                   >
                     <span className="menu-icon">🗣️</span>
-                    Chat {chatUnreadCount > 0 ? `(${chatUnreadCount})` : ''}
+                    Chat {contadorNoLeidosChat > 0 ? `(${contadorNoLeidosChat})` : ''}
                     <span className="menu-desc">Abrir el chat</span>
                   </button>
                   <div className="menu-divider" />
                 </>
               )}
 
-              {!isSpectator ? (
+              {!esEspectador ? (
                 <button 
                   className="menu-item" 
-                  onClick={handleStandUp}
+                  onClick={manejarLevantarse}
                 >
                   <span className="menu-icon">🪡</span>
                   Levantarse
@@ -649,7 +649,7 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
               ) : (
                 <button 
                   className="menu-item" 
-                  onClick={handleSitDown}
+                  onClick={manejarSentarse}
                 >
                   <span className="menu-icon">🪡</span>
                   Volver a sentarse
@@ -659,7 +659,7 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
               
               <button 
                 className="menu-item" 
-                onClick={handleOpenInvite}
+                onClick={manejarAbrirInvitar}
               >
                 <span className="menu-icon">👥</span>
                 Invitar a un amigo
@@ -668,7 +668,7 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
               
               <button 
                 className="menu-item danger" 
-                onClick={handleLeaveTable}
+                onClick={manejarSalirMesa}
               >
                 <span className="menu-icon">🚻</span>
                 Abandonar partida
@@ -681,73 +681,73 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
 
       {/* Mesa de poker con cartas comunitarias */}
       {(() => {
-        const tablePlayers = pokerGame.players.length > 0 ? pokerGame.players : players;
-        const currentUserIndex = tablePlayers.findIndex(p => p?.userId === user?.id);
+        const jugadoresMesa = juegoPoker.players.length > 0 ? juegoPoker.players : jugadores;
+        const indiceUsuarioActual = jugadoresMesa.findIndex((jugador) => jugador?.userId === usuario?.id);
         return (
-      <PokerTable 
-        maxPlayers={table.maxPlayers}
-        players={tablePlayers}
-        currentPlayerId={user?.id || user?.username} // ID del usuario actual
-        tableColor={table.tableColor}
-        dealerPosition={pokerGame.dealerPosition}
-        smallBlindPosition={pokerGame.smallBlindPosition}
-        bigBlindPosition={pokerGame.bigBlindPosition}
-        communityCards={pokerGame.communityCards}
-        gamePhase={pokerGame.gamePhase}
-        pot={pokerGame.pot}
-        sidePots={pokerGame.sidePots}
-        currentUserIndex={currentUserIndex}
-        currentPlayerIndex={pokerGame.currentPlayerTurn}
+      <MesaPoker
+        maxPlayers={mesa.maxPlayers}
+        players={jugadoresMesa}
+        currentPlayerId={usuario?.id || usuario?.username} // ID del usuario actual
+        tableColor={mesa.tableColor}
+        dealerPosition={juegoPoker.dealerPosition}
+        smallBlindPosition={juegoPoker.smallBlindPosition}
+        bigBlindPosition={juegoPoker.bigBlindPosition}
+        communityCards={juegoPoker.communityCards}
+        gamePhase={juegoPoker.gamePhase}
+        pot={juegoPoker.pot}
+        sidePots={juegoPoker.sidePots}
+        currentUserIndex={indiceUsuarioActual}
+        currentPlayerIndex={juegoPoker.currentPlayerTurn}
       />
         );
       })()}
 
       {/* Acciones de apuestas */}
-      {!isSpectator && pokerGame.gamePhase !== 'waiting' && (() => {
-        const isMyTurn = pokerGame.currentPlayerTurn === pokerGame.playerIndex;
+      {!esEspectador && juegoPoker.gamePhase !== 'waiting' && (() => {
+        const esMiTurno = juegoPoker.currentPlayerTurn === juegoPoker.playerIndex;
         console.log('🎮 BettingActions:', {
-          currentPlayerTurn: pokerGame.currentPlayerTurn,
-          playerIndex: pokerGame.playerIndex,
-          isMyTurn,
-          gamePhase: pokerGame.gamePhase
+          currentPlayerTurn: juegoPoker.currentPlayerTurn,
+          playerIndex: juegoPoker.playerIndex,
+          isMyTurn: esMiTurno,
+          gamePhase: juegoPoker.gamePhase
         });
         return (
-          <BettingActions 
-            playerChips={pokerGame.playerChips}
-            currentBet={pokerGame.currentBet}
-            minRaise={pokerGame.minRaise}
-            pot={pokerGame.pot}
-            isPlayerTurn={isMyTurn}
-            canCheck={pokerGame.canCheck}
-            canCall={pokerGame.canCall}
-            canRaise={pokerGame.canRaise}
-            canFold={pokerGame.canFold}
-            turnTimeRemaining={pokerGame.turnTimeRemaining}
-            onFold={pokerGame.handleFold}
-            onCheck={pokerGame.handleCheck}
-            onCall={pokerGame.handleCall}
-            onRaise={pokerGame.handleRaise}
-            onAllIn={pokerGame.handleAllIn}
+          <AccionesApuesta
+            playerChips={juegoPoker.playerChips}
+            currentBet={juegoPoker.currentBet}
+            minRaise={juegoPoker.minRaise}
+            pot={juegoPoker.pot}
+            isPlayerTurn={esMiTurno}
+            canCheck={juegoPoker.canCheck}
+            canCall={juegoPoker.canCall}
+            canRaise={juegoPoker.canRaise}
+            canFold={juegoPoker.canFold}
+            turnTimeRemaining={juegoPoker.turnTimeRemaining}
+            onFold={juegoPoker.handleFold}
+            onCheck={juegoPoker.handleCheck}
+            onCall={juegoPoker.handleCall}
+            onRaise={juegoPoker.handleRaise}
+            onAllIn={juegoPoker.handleAllIn}
           />
         );
       })()}
 
       {/* Panel de acciones */}
-      {isSpectator && (
+      {esEspectador && (
         <div className="actions-panel">
-          <button className="btn-action btn-rejoin" onClick={handleSitDown}>
+          <button className="btn-action btn-rejoin" onClick={manejarSentarse}>
             🪡 Volver a la Mesa
           </button>
         </div>
       )}
 
-      {isChatOpen && (
-        <section className={`table-chat-panel${isCompact ? ' compact' : ''}`}>
+      {chatAbierto && (
+        <section className={`table-chat-panel${vistaCompacta ? ' compact' : ''}`}>
           <header className="table-chat-header">
             <h3>Chat de partida</h3>
             <button
               className="table-chat-close"
-              onClick={() => setIsChatOpen(false)}
+              onClick={() => setChatAbierto(false)}
               aria-label="Cerrar chat"
             >
               ✕
@@ -755,39 +755,39 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
           </header>
 
           <div className="table-chat-messages">
-            {chatMessages.length === 0 ? (
+            {mensajesChat.length === 0 ? (
               <p className="table-chat-empty">No hay mensajes todavía. Sé el primero en escribir.</p>
             ) : (
-              chatMessages.map((msg) => {
-                const isMe = String(msg.userId) === String(user?.id);
-                const timestamp = msg?.createdAt ? new Date(msg.createdAt) : null;
-                const timeText = timestamp && !Number.isNaN(timestamp.getTime())
-                  ? timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              mensajesChat.map((mensaje) => {
+                const esMio = String(mensaje.userId) === String(usuario?.id);
+                const marcaTiempo = mensaje?.createdAt ? new Date(mensaje.createdAt) : null;
+                const textoHora = marcaTiempo && !Number.isNaN(marcaTiempo.getTime())
+                  ? marcaTiempo.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                   : '';
 
                 return (
-                  <article key={msg.id} className={`table-chat-message${isMe ? ' mine' : ''}`}>
+                  <article key={mensaje.id} className={`table-chat-message${esMio ? ' mine' : ''}`}>
                     <div className="table-chat-message-top">
-                      <span className="table-chat-user">{msg.avatar || '🎭'} {msg.username || 'Jugador'}</span>
-                      <span className="table-chat-time">{timeText}</span>
+                      <span className="table-chat-user">{mensaje.avatar || '🎭'} {mensaje.username || 'Jugador'}</span>
+                      <span className="table-chat-time">{textoHora}</span>
                     </div>
-                    <p>{msg.message}</p>
+                    <p>{mensaje.message}</p>
                   </article>
                 );
               })
             )}
-            <div ref={chatBottomRef} />
+            <div ref={referenciaFinChat} />
           </div>
 
-          <form className="table-chat-form" onSubmit={handleSendChat}>
+          <form className="table-chat-form" onSubmit={manejarEnviarChat}>
             <input
               type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value.slice(0, CHAT_MAX_LENGTH))}
+              value={entradaChat}
+              onChange={(e) => setEntradaChat(e.target.value.slice(0, MAXIMO_CARACTERES_CHAT))}
               placeholder="Escribe un mensaje..."
-              maxLength={CHAT_MAX_LENGTH}
+              maxLength={MAXIMO_CARACTERES_CHAT}
             />
-            <button type="submit" disabled={sendingChat || !chatInput.trim()}>
+            <button type="submit" disabled={enviandoChat || !entradaChat.trim()}>
               Enviar
             </button>
           </form>
@@ -795,48 +795,48 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
       )}
 
       {/* Modal de invitación a amigos */}
-      {showInviteModal && (
+      {mostrarModalInvitacion && (
         <>
-          <div className="modal-overlay" onClick={() => setShowInviteModal(false)}></div>
+          <div className="modal-overlay" onClick={() => setMostrarModalInvitacion(false)}></div>
           <div className="invite-modal">
             <div className="modal-header">
               <h3>👥 Invitar a un amigo</h3>
               <button 
                 className="btn-close-modal" 
-                onClick={() => setShowInviteModal(false)}
+                onClick={() => setMostrarModalInvitacion(false)}
               >
                 ✕
               </button>
             </div>
             
             <div className="modal-body">
-              <p className="modal-subtitle">Selecciona a quién quieres invitar a {table.name}</p>
+              <p className="modal-subtitle">Selecciona a quién quieres invitar a {mesa.name}</p>
               
               <div className="friends-list">
-                {friendsLoading && <p style={{ color: '#ddd' }}>Cargando amigos...</p>}
-                {!friendsLoading && friends.length === 0 && (
+                {cargandoAmigos && <p style={{ color: '#ddd' }}>Cargando amigos...</p>}
+                {!cargandoAmigos && amigos.length === 0 && (
                   <p style={{ color: '#ddd' }}>No tienes amigos para invitar.</p>
                 )}
-                {friends.map(friend => (
+                {amigos.map((amigo) => (
                   <div 
-                    key={friend.id} 
+                    key={amigo.id}
                     className={`friend-item ${
-                      !friend.online ? 'offline' : ''
+                      !amigo.online ? 'offline' : ''
                     } ${
-                      selectedFriends.includes(friend.id) ? 'selected' : ''
+                      amigosSeleccionados.includes(amigo.id) ? 'selected' : ''
                     }`}
-                    onClick={() => friend.online && toggleFriendSelection(friend.id)}
+                    onClick={() => amigo.online && alternarSeleccionAmigo(amigo.id)}
                   >
                     <div className="friend-info">
-                      <span className="friend-avatar">{friend.avatar}</span>
-                      <span className="friend-name">{friend.username}</span>
-                      {friend.online ? (
+                      <span className="friend-avatar">{amigo.avatar}</span>
+                      <span className="friend-name">{amigo.username}</span>
+                      {amigo.online ? (
                         <span className="status-badge online">🟢 Online</span>
                       ) : (
                         <span className="status-badge offline">⚪ Offline</span>
                       )}
                     </div>
-                    {selectedFriends.includes(friend.id) && (
+                    {amigosSeleccionados.includes(amigo.id) && (
                       <span className="check-icon">✓</span>
                     )}
                   </div>
@@ -847,16 +847,16 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
             <div className="modal-footer">
               <button 
                 className="btn-cancel" 
-                onClick={() => setShowInviteModal(false)}
+                onClick={() => setMostrarModalInvitacion(false)}
               >
                 Cancelar
               </button>
               <button 
                 className="btn-send-invites" 
-                onClick={handleSendInvites}
-                disabled={selectedFriends.length === 0}
+                onClick={manejarEnviarInvitaciones}
+                disabled={amigosSeleccionados.length === 0}
               >
-                📨 Enviar Invitaciones ({selectedFriends.length})
+                📨 Enviar Invitaciones ({amigosSeleccionados.length})
               </button>
             </div>
           </div>
@@ -866,4 +866,4 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
   );
 }
 
-export default TablePage;
+export default PaginaPartida;

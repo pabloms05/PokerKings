@@ -2,62 +2,62 @@ import React, { useState } from 'react';
 import { authService } from '../../servicios/autenticacion';
 import './InicioSesion.css';
 
-function Login({ onLoginSuccess, onSwitchToRegister }) {
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
+  const [identificador, setIdentificador] = useState('');
+  const [contrasena, setContrasena] = useState('');
+  const [cargando, setCargando] = useState(false);
+  const [errorInicio, setErrorInicio] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  const manejarEnvio = async (evento) => {
+    evento.preventDefault();
+    setErrorInicio('');
+    setCargando(true);
 
     try {
       // Llamar al servicio de autenticación
-      const result = await authService.login(identifier, password);
+      const resultado = await authService.login(identificador, contrasena);
 
-      if (result.success) {
-        console.log('✅ Login exitoso:', result.user);
+      if (resultado.success) {
+        console.log('✅ Login exitoso:', resultado.user);
         // Notificar al componente padre
-        if (onLoginSuccess) {
-          onLoginSuccess(result.user);
+        if (alIniciarSesionExito) {
+          alIniciarSesionExito(resultado.user);
         }
       } else {
-        setError(result.error || 'Error al iniciar sesión');
+        setErrorInicio(resultado.error || 'Error al iniciar sesión');
       }
     } catch (err) {
       console.error('Error en login:', err);
-      setError('Error de conexión con el servidor');
+      setErrorInicio('Error de conexión con el servidor');
     } finally {
-      setLoading(false);
+      setCargando(false);
     }
   };
 
   // Login rápido para pruebas
-  const handleQuickLogin = async (userNumber) => {
-    setError('');
-    setLoading(true);
+  const manejarLoginRapido = async (numeroUsuario) => {
+    setErrorInicio('');
+    setCargando(true);
     try {
-      const email = `jugador${userNumber}@pokerkings.com`;
+      const email = `jugador${numeroUsuario}@pokerkings.com`;
       console.log('🔐 Intentando login con:', email);
       
-      const result = await authService.login(email, 'password123');
+      const resultado = await authService.login(email, 'password123');
       
-      console.log('📊 Resultado del login:', result);
+      console.log('📊 Resultado del login:', resultado);
       
-      if (result.success) {
-        console.log('✅ Login exitoso:', result.user);
-        onLoginSuccess(result.user);
+      if (resultado.success) {
+        console.log('✅ Login exitoso:', resultado.user);
+        alIniciarSesionExito(resultado.user);
       } else {
-        console.error('❌ Login fallido:', result.error);
-        setError(result.error || 'Error al iniciar sesión');
+        console.error('❌ Login fallido:', resultado.error);
+        setErrorInicio(resultado.error || 'Error al iniciar sesión');
       }
     } catch (err) {
       console.error('💥 Error en login rápido:', err);
-      setError(`Error: ${err.message}`);
+      setErrorInicio(`Error: ${err.message}`);
     } finally {
-      setLoading(false);
+      setCargando(false);
     }
   };
 
@@ -72,14 +72,14 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
         </div>
 
         {/* Mostrar error si existe */}
-        {error && (
+        {errorInicio && (
           <div className="login-error">
             <span className="error-icon">⚠️</span>
-            <span>{error}</span>
+            <span>{errorInicio}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="login-form">
+        <form onSubmit={manejarEnvio} className="login-form">
           {/* Email o username */}
           <div className="form-group">
             <label htmlFor="identifier" className="form-label">
@@ -91,10 +91,10 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
               className="form-input"
               id="identifier"
               placeholder="correo@ejemplo.com o PokerKing123"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
+              value={identificador}
+              onChange={(e) => setIdentificador(e.target.value)}
               required
-              disabled={loading}
+              disabled={cargando}
               autoComplete="username"
             />
           </div>
@@ -110,10 +110,10 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
               className="form-input"
               id="password"
               placeholder="••••••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={contrasena}
+              onChange={(e) => setContrasena(e.target.value)}
               required
-              disabled={loading}
+              disabled={cargando}
             />
           </div>
 
@@ -121,9 +121,9 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
           <button
             type="submit"
             className="btn-login"
-            disabled={loading}
+            disabled={cargando}
           >
-            {loading ? (
+            {cargando ? (
               <>
                 <span className="spinner"></span>
                 Iniciando sesión...
@@ -142,8 +142,8 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
           <p className="footer-text">¿No tienes cuenta?</p>
           <button
             className="btn-register"
-            onClick={onSwitchToRegister}
-            disabled={loading}
+            onClick={alCambiarARegistro}
+            disabled={cargando}
           >
             Crear Cuenta Nueva
           </button>
@@ -157,22 +157,22 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
           <div className="quick-login-buttons">
             <button
               className="btn-quick"
-              onClick={() => handleQuickLogin(1)}
-              disabled={loading}
+              onClick={() => manejarLoginRapido(1)}
+              disabled={cargando}
             >
               Jugador 1
             </button>
             <button
               className="btn-quick"
-              onClick={() => handleQuickLogin(2)}
-              disabled={loading}
+              onClick={() => manejarLoginRapido(2)}
+              disabled={cargando}
             >
               Jugador 2
             </button>
             <button
               className="btn-quick"
-              onClick={() => handleQuickLogin(3)}
-              disabled={loading}
+              onClick={() => manejarLoginRapido(3)}
+              disabled={cargando}
             >
               Jugador 3
             </button>
@@ -186,4 +186,4 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
   );
 }
 
-export default Login;
+export default InicioSesion;

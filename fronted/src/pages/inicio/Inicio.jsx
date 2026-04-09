@@ -1,7 +1,7 @@
 import React from 'react';
 import './Inicio.css';
 
-function HomePage({ onNavigate }) {
+function PaginaInicio({ onNavigate: alNavegar }) {
   return (
     <div className="home-page">
       <div className="home-content">
@@ -20,7 +20,7 @@ function HomePage({ onNavigate }) {
           <div className="home-buttons">
             <button 
               className="btn btn-home btn-play"
-              onClick={() => onNavigate('mesas')}
+              onClick={() => alNavegar('mesas')}
             >
               <span className="btn-icon">🎮</span>
               <span className="btn-text">Jugar</span>
@@ -28,7 +28,7 @@ function HomePage({ onNavigate }) {
             
             <button 
               className="btn btn-home btn-create"
-              onClick={() => onNavigate('crear')}
+              onClick={() => alNavegar('crear')}
             >
               <span className="btn-icon">🔒</span>
               <span className="btn-text">Crear Mesa</span>
@@ -41,4 +41,4 @@ function HomePage({ onNavigate }) {
   );
 }
 
-export default HomePage;
+export default PaginaInicio;

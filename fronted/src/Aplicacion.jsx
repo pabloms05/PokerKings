@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
 import Navbar from './componentes/diseño/BarraNavegacion'
-import Login from './pages/login-register/InicioSesion'
-import Register from './pages/login-register/Registro'
-import HomePage from './pages/inicio/Inicio'
-import LobbyPage from './pages/mesas/Mesas'
-import CreateTablePage from './pages/creacion-de-mesas/CrearMesa'
-import TablePage from './pages/partida/Partida'
-import Tienda from './pages/tienda/Tienda'
+import InicioSesion from './pages/login-register/InicioSesion'
+import Registro from './pages/login-register/Registro'
+import PaginaInicio from './pages/inicio/Inicio'
+import PaginaMesas from './pages/mesas/Mesas'
+import PaginaCrearMesa from './pages/creacion-de-mesas/CrearMesa'
+import PaginaPartida from './pages/partida/Partida'
+import PaginaTienda from './pages/tienda/Tienda'
 import './Aplicacion.css'
 import './estilos/animaciones.css'
 import { authService } from './servicios/autenticacion'
@@ -16,35 +16,35 @@ import { socketService } from './servicios/socketBase'
 import { addGameInvitation, removeGameInvitation } from './servicios/invitaciones'
 import { validateTableName } from './servicios/filtroNombreMesa'
 
-function App() {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [showRegister, setShowRegister] = useState(false)
-  const [currentView, setCurrentView] = useState(
+function Aplicacion() {
+  const [usuario, setUsuario] = useState(null)
+  const [cargando, setCargando] = useState(true)
+  const [mostrarRegistro, setMostrarRegistro] = useState(false)
+  const [vistaActual, setVistaActual] = useState(
     () => sessionStorage.getItem('nav_view') || 'inicio'
   )
-  const [currentTable, setCurrentTable] = useState(() => {
+  const [mesaActual, setMesaActual] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('nav_table')) } catch { return null }
   })
 
   // Cargar datos al iniciar
   useEffect(() => {
-    const loadData = async () => {
+    const cargarDatos = async () => {
       try {
-        setLoading(true)
+        setCargando(true)
         
         // Verificar si hay usuario autenticado
-        const currentUser = authService.getCurrentUser()
-        if (currentUser) {
+        const usuarioActual = authService.getCurrentUser()
+        if (usuarioActual) {
           // Cargar datos frescos desde la BD para tener fichas correctas
           try {
-            const response = await userAPI.getUserById(currentUser.id)
-            const freshUser = { ...currentUser, ...response.data }
-            setUser(freshUser)
-            sessionStorage.setItem('user', JSON.stringify(freshUser))
+            const response = await userAPI.getUserById(usuarioActual.id)
+            const usuarioFresco = { ...usuarioActual, ...response.data }
+            setUsuario(usuarioFresco)
+            sessionStorage.setItem('user', JSON.stringify(usuarioFresco))
           } catch {
             // Si falla la BD, usar sessionStorage pero sanear las fichas
-            setUser({ ...currentUser, chips: Number(currentUser.chips) || 0 })
+            setUsuario({ ...usuarioActual, chips: Number(usuarioActual.chips) || 0 })
           }
         } else {
           // sin tablas
@@ -52,32 +52,32 @@ function App() {
       } catch (err) {
         console.error('Error cargando datos:', err)
       } finally {
-        setLoading(false)
+        setCargando(false)
       }
     }
 
-    loadData()
+    cargarDatos()
   }, [])
 
   // Función cuando el inicio de sesión es exitoso
-  const handleLoginSuccess = (loggedUser) => {
-    setUser(loggedUser)
+  const manejarInicioSesionExitoso = (usuarioLogueado) => {
+    setUsuario(usuarioLogueado)
   }
 
   // Función cuando el registro es exitoso
-  const handleRegisterSuccess = (registeredUser) => {
-    setUser(registeredUser)
-    setShowRegister(false)
+  const manejarRegistroExitoso = (usuarioRegistrado) => {
+    setUsuario(usuarioRegistrado)
+    setMostrarRegistro(false)
   }
 
   // Función para cerrar sesión
-  const handleLogout = () => {
+  const manejarCerrarSesion = () => {
     authService.logout()
     sessionStorage.removeItem('nav_view')
     sessionStorage.removeItem('nav_table')
-    setUser(null)
-    setCurrentView('inicio')
-    setCurrentTable(null)
+    setUsuario(null)
+    setVistaActual('inicio')
+    setMesaActual(null)
   }
 
   // Logout automático cuando el token expira (401)
@@ -86,22 +86,22 @@ function App() {
       authService.logout()
       sessionStorage.removeItem('nav_view')
       sessionStorage.removeItem('nav_table')
-      setUser(null)
-      setCurrentView('inicio')
-      setCurrentTable(null)
+      setUsuario(null)
+      setVistaActual('inicio')
+      setMesaActual(null)
     }
     window.addEventListener('auth:unauthorized', onUnauthorized)
     return () => window.removeEventListener('auth:unauthorized', onUnauthorized)
   }, []) // setters de useState son estables, no necesitan deps
 
   // Función para actualizar usuario
-  const handleUpdateUser = async (updatedUser) => {
-    setUser(updatedUser)
-    sessionStorage.setItem('user', JSON.stringify(updatedUser))
+  const manejarActualizarUsuario = async (usuarioActualizado) => {
+    setUsuario(usuarioActualizado)
+    sessionStorage.setItem('user', JSON.stringify(usuarioActualizado))
     try {
-      await userAPI.updateProfile(updatedUser.id, {
-        avatar: updatedUser.avatar,
-        chips: updatedUser.chips,
+      await userAPI.updateProfile(usuarioActualizado.id, {
+        avatar: usuarioActualizado.avatar,
+        chips: usuarioActualizado.chips,
       })
     } catch (err) {
       console.warn('No se pudo guardar perfil en backend:', err)
@@ -109,33 +109,33 @@ function App() {
   }
 
   // Navegación entre vistas
-  const handleNavigate = (view) => {
-    sessionStorage.setItem('nav_view', view)
-    if (view !== 'partida') {
+  const manejarNavegacion = (vista) => {
+    sessionStorage.setItem('nav_view', vista)
+    if (vista !== 'partida') {
       sessionStorage.removeItem('nav_table')
-      setCurrentTable(null)
+      setMesaActual(null)
     }
-    setCurrentView(view)
+    setVistaActual(vista)
   }
 
   // Notificaciones de invitación a partida en tiempo real
   useEffect(() => {
-    if (!user?.id) return;
+    if (!usuario?.id) return;
 
     const token = authService.getToken();
     if (token) {
       socketService.connect(token);
     }
 
-    const handleGameInvitation = (invite) => {
-      const storedInvite = addGameInvitation(invite)
-      const inviterName = invite?.from?.username || 'Un amigo';
-      const tableName = invite?.table?.name || 'una mesa';
+    const manejarInvitacionPartida = (invitacion) => {
+      const invitacionGuardada = addGameInvitation(invitacion)
+      const nombreInvitador = invitacion?.from?.username || 'Un amigo';
+      const nombreMesa = invitacion?.table?.name || 'una mesa';
 
       toast((t) => (
         <div style={{ textAlign: 'left' }}>
           <div style={{ marginBottom: '0.6rem' }}>
-            <strong>{inviterName}</strong> te invitó a <strong>{tableName}</strong>
+            <strong>{nombreInvitador}</strong> te invitó a <strong>{nombreMesa}</strong>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
             <button
@@ -154,18 +154,18 @@ function App() {
             <button
               onClick={async () => {
                 toast.dismiss(t.id)
-                if (!invite?.table?.id) {
-                  setCurrentView('mesas')
+                if (!invitacion?.table?.id) {
+                  setVistaActual('mesas')
                   return
                 }
 
                 try {
-                  await handleJoinTable(invite.table, invite.invitationToken)
-                  if (storedInvite?.id) {
-                    removeGameInvitation(storedInvite.id)
+                  await manejarUnirseMesa(invitacion.table, invitacion.invitationToken)
+                  if (invitacionGuardada?.id) {
+                    removeGameInvitation(invitacionGuardada.id)
                   }
                 } catch {
-                  setCurrentView('mesas')
+                  setVistaActual('mesas')
                 }
               }}
               style={{
@@ -182,23 +182,23 @@ function App() {
             </button>
           </div>
         </div>
-      ), { duration: 7000, id: `game-invite-${storedInvite?.id || invite?.gameId || Date.now()}` })
+      ), { duration: 7000, id: `game-invite-${invitacionGuardada?.id || invitacion?.gameId || Date.now()}` })
     }
 
-    socketService.onGameInvitation(handleGameInvitation)
-    return () => socketService.offGameInvitation(handleGameInvitation)
-  }, [user?.id])
+    socketService.onGameInvitation(manejarInvitacionPartida)
+    return () => socketService.offGameInvitation(manejarInvitacionPartida)
+  }, [usuario?.id])
 
   // Permitir navegar a una mesa al aceptar invitación desde el panel de invitaciones.
   useEffect(() => {
     const onNavigateToInvitationTable = (event) => {
-      const table = event?.detail?.table
-      if (!table?.id) return
+      const mesa = event?.detail?.table
+      if (!mesa?.id) return
 
-      sessionStorage.setItem('nav_table', JSON.stringify(table))
+      sessionStorage.setItem('nav_table', JSON.stringify(mesa))
       sessionStorage.setItem('nav_view', 'partida')
-      setCurrentTable(table)
-      setCurrentView('partida')
+      setMesaActual(mesa)
+      setVistaActual('partida')
     }
 
     window.addEventListener('invitacion:abrir-mesa', onNavigateToInvitationTable)
@@ -206,17 +206,17 @@ function App() {
   }, [])
 
   // Unirse a mesa
-  const handleJoinTable = async (table, invitationToken = null) => {
+  const manejarUnirseMesa = async (mesa, tokenInvitacion = null) => {
     try {
-      console.log('Unirse a mesa:', table)
-      const response = await tableAPI.joinTable(table.id, invitationToken)
-      const resolvedTable = response.data?.table || table
+      console.log('Unirse a mesa:', mesa)
+      const response = await tableAPI.joinTable(mesa.id, tokenInvitacion)
+      const mesaResuelta = response.data?.table || mesa
 
       // Solo entrar a mesa cuando el backend confirma join
-      sessionStorage.setItem('nav_table', JSON.stringify(resolvedTable))
+      sessionStorage.setItem('nav_table', JSON.stringify(mesaResuelta))
       sessionStorage.setItem('nav_view', 'partida')
-      setCurrentTable(resolvedTable)
-      setCurrentView('partida')
+      setMesaActual(mesaResuelta)
+      setVistaActual('partida')
     } catch (err) {
       console.error('Error uniéndose a mesa:', err)
       toast.error(err?.response?.data?.message || 'No se pudo unir a la mesa')
@@ -224,39 +224,39 @@ function App() {
   }
 
   // Crear mesa
-  const handleCreateTable = async (formData) => {
+  const manejarCrearMesa = async (datosFormulario) => {
     try {
-      console.log('Creando mesa:', formData)
-      const nameValidation = validateTableName(formData.tableName)
-      if (!nameValidation.isValid) {
-        toast.error(nameValidation.message)
+      console.log('Creando mesa:', datosFormulario)
+      const validacionNombre = validateTableName(datosFormulario.tableName)
+      if (!validacionNombre.isValid) {
+        toast.error(validacionNombre.message)
         return
       }
       
       // Llamar al backend para crear la mesa
-      const tableData = {
-        name: formData.tableName,
-        smallBlind: formData.smallBlind,
-        bigBlind: formData.bigBlind,
-        maxPlayers: formData.maxPlayers,
-        isPrivate: formData.isPrivate,
-        botsCount: formData.bots
+      const datosMesa = {
+        name: datosFormulario.tableName,
+        smallBlind: datosFormulario.smallBlind,
+        bigBlind: datosFormulario.bigBlind,
+        maxPlayers: datosFormulario.maxPlayers,
+        isPrivate: datosFormulario.isPrivate,
+        botsCount: datosFormulario.bots
       }
       
       try {
-        const response = await tableAPI.createTable(tableData)
+        const response = await tableAPI.createTable(datosMesa)
         
         // Establecer la mesa creada como mesa actual
-        const createdTable = {
+        const mesaCreada = {
           ...response.data,
-          players: [user], // El creador es el primer jugador
-          botsCount: formData.bots
+          players: [usuario], // El creador es el primer jugador
+          botsCount: datosFormulario.bots
         }
-        sessionStorage.setItem('nav_table', JSON.stringify(createdTable))
+        sessionStorage.setItem('nav_table', JSON.stringify(mesaCreada))
         sessionStorage.setItem('nav_view', 'partida')
-        setCurrentTable(createdTable)
+        setMesaActual(mesaCreada)
         
-        setCurrentView('partida')
+        setVistaActual('partida')
         
       } catch (apiError) {
         if (apiError?.response) {
@@ -265,16 +265,16 @@ function App() {
 
         // Si backend no está disponible, crear mesa localmente
         console.warn('Backend no disponible, creando mesa localmente')
-        const localTable = {
+        const mesaLocal = {
           id: Date.now(),
-          ...tableData,
-          players: [user],
+          ...datosMesa,
+          players: [usuario],
           status: 'waiting'
         }
-        sessionStorage.setItem('nav_table', JSON.stringify(localTable))
+        sessionStorage.setItem('nav_table', JSON.stringify(mesaLocal))
         sessionStorage.setItem('nav_view', 'partida')
-        setCurrentTable(localTable)
-        setCurrentView('partida')
+        setMesaActual(mesaLocal)
+        setVistaActual('partida')
       }
     } catch (err) {
       console.error('Error creando mesa:', err)
@@ -282,7 +282,7 @@ function App() {
     }
   }
 
-  if (loading) {
+  if (cargando) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0e27', color: '#daa520', fontSize: '1.2rem' }}>
         <span>Cargando...</span>
@@ -291,18 +291,18 @@ function App() {
   }
 
   // Si no hay usuario, mostrar inicio de sesión o registro
-  if (!user) {
+  if (!usuario) {
     return (
       <div className="App">
-        {showRegister ? (
-          <Register
-            onRegisterSuccess={handleRegisterSuccess}
-            onSwitchToLogin={() => setShowRegister(false)}
+        {mostrarRegistro ? (
+          <Registro
+            alRegistroExitoso={manejarRegistroExitoso}
+            alCambiarALogin={() => setMostrarRegistro(false)}
           />
         ) : (
-          <Login
-            onLoginSuccess={handleLoginSuccess}
-            onSwitchToRegister={() => setShowRegister(true)}
+          <InicioSesion
+            alIniciarSesionExito={manejarInicioSesionExitoso}
+            alCambiarARegistro={() => setMostrarRegistro(true)}
           />
         )}
       </div>
@@ -341,46 +341,46 @@ function App() {
         }}
       />
       
-      <Navbar user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} onNavigate={handleNavigate} />
+      <Navbar user={usuario} onLogout={manejarCerrarSesion} onUpdateUser={manejarActualizarUsuario} onNavigate={manejarNavegacion} />
       
       {/* Renderizar vista actual */}
-      {currentView === 'inicio' && (
-        <HomePage onNavigate={handleNavigate} />
+      {vistaActual === 'inicio' && (
+        <PaginaInicio onNavigate={manejarNavegacion} />
       )}
 
-      {currentView === 'mesas' && (
-        <LobbyPage 
-          user={user}
-          onNavigate={handleNavigate}
-          onJoinTable={handleJoinTable}
+      {vistaActual === 'mesas' && (
+        <PaginaMesas
+          user={usuario}
+          onNavigate={manejarNavegacion}
+          onJoinTable={manejarUnirseMesa}
         />
       )}
 
-      {currentView === 'crear' && (
-        <CreateTablePage 
-          onNavigate={handleNavigate}
-          onCreate={handleCreateTable}
+      {vistaActual === 'crear' && (
+        <PaginaCrearMesa
+          onNavigate={manejarNavegacion}
+          onCreate={manejarCrearMesa}
         />
       )}
 
-      {currentView === 'partida' && currentTable && (
-        <TablePage 
-          table={currentTable}
-          user={user}
-          onUpdateUser={handleUpdateUser}
-          onNavigate={handleNavigate}
+      {vistaActual === 'partida' && mesaActual && (
+        <PaginaPartida
+          table={mesaActual}
+          user={usuario}
+          onUpdateUser={manejarActualizarUsuario}
+          onNavigate={manejarNavegacion}
         />
       )}
 
-      {currentView === 'tienda' && (
-        <Tienda
-          user={user}
-          onNavigate={handleNavigate}
-          onUpdateUser={handleUpdateUser}
+      {vistaActual === 'tienda' && (
+        <PaginaTienda
+          usuario={usuario}
+          alNavegar={manejarNavegacion}
+          alActualizarUsuario={manejarActualizarUsuario}
         />
       )}
     </div>
   )
 }
 
-export default App
+export default Aplicacion
