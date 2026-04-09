@@ -8,29 +8,28 @@ import { gameSocket } from '../../servicios/socketJuego';
 import { socketService } from '../../servicios/socketBase';
 import './Partida.css';
 
-function TablePage({ table, user, onNavigate, onUpdateUser }) {
-  const CHAT_MAX_LENGTH = 300;
-  const [players, setPlayers] = useState([]);
-  const [showMenu, setShowMenu] = useState(false);
-  const [isSpectator, setIsSpectator] = useState(false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [selectedFriends, setSelectedFriends] = useState([]);
-  const [friends, setFriends] = useState([]);
-  const [friendsLoading, setFriendsLoading] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [lastShownHandOver, setLastShownHandOver] = useState(null);
-  const [winnerPopupData, setWinnerPopupData] = useState(null);
-  const [spectatorDelayUntil, setSpectatorDelayUntil] = useState(0);
-  const [isCompact, setIsCompact] = useState(window.innerWidth < 900);
-  const [showHandsGuide, setShowHandsGuide] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState([]);
-  const [chatInput, setChatInput] = useState('');
-  const [sendingChat, setSendingChat] = useState(false);
-  const [chatUnreadCount, setChatUnreadCount] = useState(0);
-  const chatBottomRef = useRef(null);
-  const friendsRef = useRef([]);
+function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUpdateUser: alActualizarUsuario }) {
+  const MAXIMO_CARACTERES_CHAT = 300;
+  const [jugadores, setJugadores] = useState([]);
+  const [mostrarMenu, setMostrarMenu] = useState(false);
+  const [esEspectador, setEsEspectador] = useState(false);
+  const [mostrarModalInvitacion, setMostrarModalInvitacion] = useState(false);
+  const [amigosSeleccionados, setAmigosSeleccionados] = useState([]);
+  const [amigos, setAmigos] = useState([]);
+  const [cargandoAmigos, setCargandoAmigos] = useState(false);
+  const [cargando, setCargando] = useState(false);
+  const [errorVista, setErrorVista] = useState(null);
+  const [ultimaManoMostrada, setUltimaManoMostrada] = useState(null);
+  const [datosPopupGanador, setDatosPopupGanador] = useState(null);
+  const [retrasoEspectadorHasta, setRetrasoEspectadorHasta] = useState(0);
+  const [vistaCompacta, setVistaCompacta] = useState(window.innerWidth < 900);
+  const [chatAbierto, setChatAbierto] = useState(false);
+  const [mensajesChat, setMensajesChat] = useState([]);
+  const [entradaChat, setEntradaChat] = useState('');
+  const [enviandoChat, setEnviandoChat] = useState(false);
+  const [contadorNoLeidosChat, setContadorNoLeidosChat] = useState(0);
+  const referenciaFinChat = useRef(null);
+  const referenciaAmigos = useRef([]);
 
   // Detectar tamaño de pantalla para colapsar botones
   useEffect(() => {
@@ -144,7 +143,7 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
   }, [mostrarModalInvitacion]);
 
   // Usar el hook de juego de póker (conectado con backend)
-  const pokerGame = usePokerGame(user);
+  const juegoPoker = useJuegoPoker(usuario);
 
   const refrescarSaldoUsuario = async () => {
     if (!usuario?.id || !alActualizarUsuario) return;
@@ -173,12 +172,12 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
   }, [juegoPoker.players, usuario?.id, retrasoEspectadorHasta]);
 
   useEffect(() => {
-    if (pokerGame.lastHandResult) {
-      const idsKey = (pokerGame.lastHandResult.winnerIds || []).join(',');
-      const key = `${idsKey || pokerGame.lastHandResult.winnerId}-${pokerGame.lastHandResult.potWon}`;
-      if (key !== lastShownHandOver) {
-        const winners = pokerGame.lastHandResult.winners || [];
-        const meWon = (pokerGame.lastHandResult.winnerIds || []).includes(user?.id) || pokerGame.lastHandResult.winnerId === user?.id;
+    if (juegoPoker.lastHandResult) {
+      const claveIds = (juegoPoker.lastHandResult.winnerIds || []).join(',');
+      const claveMano = `${claveIds || juegoPoker.lastHandResult.winnerId}-${juegoPoker.lastHandResult.potWon}`;
+      if (claveMano !== ultimaManoMostrada) {
+        const ganadores = juegoPoker.lastHandResult.winners || [];
+        const yoGane = (juegoPoker.lastHandResult.winnerIds || []).includes(usuario?.id) || juegoPoker.lastHandResult.winnerId === usuario?.id;
 
         setDatosPopupGanador({
           winnerName: ganadores.length > 1
@@ -200,10 +199,7 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
           setRetrasoEspectadorHasta(hasta);
           setEsEspectador(false);
 
-          const defaultRebuy = Math.min(Math.max(0, Number(user?.chips) || 0), tableBuyIn);
-          setRebuyAmount(defaultRebuy);
-          setRebuyError('');
-          setShowBustedRebuyModal(true);
+          toast.error('Te has quedado sin fichas. Pasarás a modo espectador para la siguiente mano.');
 
           setTimeout(() => {
             setEsEspectador(true);
@@ -213,12 +209,12 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
         setUltimaManoMostrada(claveMano);
       }
     }
-  }, [pokerGame.lastHandResult, pokerGame.players, lastShownHandOver, user?.id]);
+  }, [juegoPoker.lastHandResult, juegoPoker.players, ultimaManoMostrada, usuario?.id]);
 
   // Inicializar el juego desde el backend
   useEffect(() => {
-    const initializeGame = async () => {
-      if (!table || !user) return;
+    const inicializarJuego = async () => {
+      if (!mesa || !usuario) return;
 
       try {
         setCargando(true);
@@ -281,7 +277,7 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
         gameSocket.leaveTable(mesa.id);
       }
     };
-  }, [table, user]);
+  }, [mesa, usuario]);
 
   // Manejar levantarse (modo espectador)
   const manejarLevantarse = async () => {
@@ -332,7 +328,7 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
   };
 
   // Manejar volver a sentarse
-  const handleSitDown = async () => {
+  const manejarSentarse = async () => {
     try {
       if (mesa && usuario) {
         // Re-unirse a la sala de WebSocket (por si se había desconectado)
@@ -353,45 +349,11 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
         }
         await refrescarSaldoUsuario();
       }
-      setIsSpectator(false);
-      setShowMenu(false);
+      setEsEspectador(false);
+      setMostrarMenu(false);
       console.log('🪡 Usuario volvió a sentarse en la mesa');
-      return true;
     } catch (err) {
       console.error('Error al volver a sentarse:', err);
-      const apiError = err?.response?.data;
-      const message = apiError?.code === 'INSUFFICIENT_CHIPS'
-        ? `No tienes fichas suficientes para recargar. Necesitas ${tableBuyIn.toLocaleString()} PK y tienes ${Math.max(0, Number(apiError?.availableChips ?? user?.chips ?? 0)).toLocaleString()} PK.`
-        : (apiError?.error || apiError?.message || 'No se pudo recargar asiento en la mesa.');
-
-      if (fromRebuyModal) {
-        setRebuyError(message);
-      }
-      toast.error(message);
-      return false;
-    }
-  };
-
-  const handleConfirmRebuy = async () => {
-    setRebuyError('');
-    const available = Math.max(0, Number(user?.chips) || 0);
-    const selected = Math.max(0, Number(rebuyAmount) || 0);
-
-    if (selected > available) {
-      setRebuyError('La cantidad de recarga no puede ser mayor que tus fichas disponibles.');
-      return;
-    }
-
-    if (selected < tableBuyIn) {
-      setRebuyError(`Esta mesa requiere un buy-in minimo de ${tableBuyIn.toLocaleString()} PK para volver a sentarte.`);
-      return;
-    }
-
-    setRebuyLoading(true);
-    try {
-      await handleSitDown({ fromRebuyModal: true });
-    } finally {
-      setRebuyLoading(false);
     }
   };
 
@@ -606,60 +568,6 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
         </div>
       )}
 
-      {showBustedRebuyModal && (
-        <div className="busted-rebuy-overlay">
-          <div className="busted-rebuy-modal">
-            <h3>Te has quedado sin fichas</h3>
-            <p className="busted-rebuy-text">
-              Te quedas como espectador hasta que recargues. Ajusta la recarga desde tus fichas totales.
-            </p>
-
-            <div className="busted-rebuy-row">
-              <span>En cartera: {walletChips.toLocaleString()} PK</span>
-              <span>Buy-in mesa: {tableBuyIn.toLocaleString()} PK</span>
-            </div>
-
-            <input
-              className="busted-rebuy-slider"
-              type="range"
-              min="0"
-              max={walletChips}
-              step="10"
-              value={Math.min(rebuyAmount, walletChips)}
-              onChange={(e) => setRebuyAmount(Number(e.target.value))}
-              disabled={rebuyLoading || walletChips <= 0}
-            />
-
-            <div className="busted-rebuy-amount">Recarga seleccionada: {Math.min(rebuyAmount, walletChips).toLocaleString()} PK</div>
-
-            {walletChips < tableBuyIn && (
-              <div className="busted-rebuy-warning">
-                No tienes saldo suficiente para sentarte de nuevo en esta mesa.
-              </div>
-            )}
-
-            {rebuyError && <div className="busted-rebuy-error">{rebuyError}</div>}
-
-            <div className="busted-rebuy-actions">
-              <button
-                className="btn-rebuy-secondary"
-                onClick={() => setShowBustedRebuyModal(false)}
-                disabled={rebuyLoading}
-              >
-                Seguir como espectador
-              </button>
-              <button
-                className="btn-rebuy-primary"
-                onClick={handleConfirmRebuy}
-                disabled={rebuyLoading || walletChips < tableBuyIn}
-              >
-                {rebuyLoading ? 'Recargando...' : 'Recargar y volver a jugar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header con información de la mesa */}
       <div className="table-header">
         <button className="btn-back" onClick={manejarSalirMesa}>
@@ -689,132 +597,15 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
             </button>
           )}
 
-          <button
-            className="btn-menu btn-hands-guide"
-            onClick={() => setShowHandsGuide((prev) => !prev)}
-            aria-expanded={showHandsGuide}
-            aria-haspopup="true"
-          >
-            🃏 Combinaciones {showHandsGuide ? '▲' : '▼'}
-          </button>
-
           <button 
-            className={`btn-menu${isCompact ? ' compact' : ''}`}
-            onClick={() => setShowMenu(!showMenu)}
+            className={`btn-menu${vistaCompacta ? ' compact' : ''}`}
+            onClick={() => setMostrarMenu(!mostrarMenu)}
           >
-            {isCompact ? '☰' : '☰ Menú'}
+            {vistaCompacta ? '☰' : '☰ Menú'}
           </button>
 
-          {showHandsGuide && (
-            <div className="hands-guide-dropdown">
-              <div className="hands-guide-title">Ranking de manos (mayor a menor)</div>
-              <ul className="hands-guide-list">
-                <li>
-                  <strong>Escalera Real</strong>
-                  <div className="hand-example">
-                    <img src="/assets/images/AS.png" alt="A♠" />
-                    <img src="/assets/images/KS.png" alt="K♠" />
-                    <img src="/assets/images/QS.png" alt="Q♠" />
-                    <img src="/assets/images/JS.png" alt="J♠" />
-                    <img src="/assets/images/10S.png" alt="10♠" />
-                  </div>
-                </li>
-                <li>
-                  <strong>Escalera de Color</strong>
-                  <div className="hand-example">
-                    <img src="/assets/images/9S.png" alt="9♠" />
-                    <img src="/assets/images/8S.png" alt="8♠" />
-                    <img src="/assets/images/7S.png" alt="7♠" />
-                    <img src="/assets/images/6S.png" alt="6♠" />
-                    <img src="/assets/images/5S.png" alt="5♠" />
-                  </div>
-                </li>
-                <li>
-                  <strong>Poker</strong>
-                  <div className="hand-example">
-                    <img src="/assets/images/AS.png" alt="A♠" />
-                    <img src="/assets/images/AH.png" alt="A♥" />
-                    <img src="/assets/images/AD.png" alt="A♦" />
-                    <img src="/assets/images/AC.png" alt="A♣" />
-                    <img src="/assets/images/KS.png" alt="K♠" />
-                  </div>
-                </li>
-                <li>
-                  <strong>Full House</strong>
-                  <div className="hand-example">
-                    <img src="/assets/images/AS.png" alt="A♠" />
-                    <img src="/assets/images/AH.png" alt="A♥" />
-                    <img src="/assets/images/AD.png" alt="A♦" />
-                    <img src="/assets/images/KH.png" alt="K♥" />
-                    <img src="/assets/images/KC.png" alt="K♣" />
-                  </div>
-                </li>
-                <li>
-                  <strong>Color</strong>
-                  <div className="hand-example">
-                    <img src="/assets/images/AS.png" alt="A♠" />
-                    <img src="/assets/images/KS.png" alt="K♠" />
-                    <img src="/assets/images/QS.png" alt="Q♠" />
-                    <img src="/assets/images/JS.png" alt="J♠" />
-                    <img src="/assets/images/9S.png" alt="9♠" />
-                  </div>
-                </li>
-                <li>
-                  <strong>Escalera</strong>
-                  <div className="hand-example">
-                    <img src="/assets/images/AS.png" alt="A♠" />
-                    <img src="/assets/images/KH.png" alt="K♥" />
-                    <img src="/assets/images/QD.png" alt="Q♦" />
-                    <img src="/assets/images/JC.png" alt="J♣" />
-                    <img src="/assets/images/10S.png" alt="10♠" />
-                  </div>
-                </li>
-                <li>
-                  <strong>Trio</strong>
-                  <div className="hand-example">
-                    <img src="/assets/images/AS.png" alt="A♠" />
-                    <img src="/assets/images/AH.png" alt="A♥" />
-                    <img src="/assets/images/AD.png" alt="A♦" />
-                    <img src="/assets/images/KH.png" alt="K♥" />
-                    <img src="/assets/images/QC.png" alt="Q♣" />
-                  </div>
-                </li>
-                <li>
-                  <strong>Doble Pareja</strong>
-                  <div className="hand-example">
-                    <img src="/assets/images/AS.png" alt="A♠" />
-                    <img src="/assets/images/AH.png" alt="A♥" />
-                    <img src="/assets/images/KD.png" alt="K♦" />
-                    <img src="/assets/images/KC.png" alt="K♣" />
-                    <img src="/assets/images/QS.png" alt="Q♠" />
-                  </div>
-                </li>
-                <li>
-                  <strong>Pareja</strong>
-                  <div className="hand-example">
-                    <img src="/assets/images/AS.png" alt="A♠" />
-                    <img src="/assets/images/AH.png" alt="A♥" />
-                    <img src="/assets/images/KD.png" alt="K♦" />
-                    <img src="/assets/images/QC.png" alt="Q♣" />
-                    <img src="/assets/images/JS.png" alt="J♠" />
-                  </div>
-                </li>
-                <li>
-                  <strong>Carta Alta</strong>
-                  <div className="hand-example">
-                    <img src="/assets/images/AS.png" alt="A♠" />
-                    <img src="/assets/images/KH.png" alt="K♥" />
-                    <img src="/assets/images/QD.png" alt="Q♦" />
-                    <img src="/assets/images/JC.png" alt="J♣" />
-                    <img src="/assets/images/9S.png" alt="9♠" />
-                  </div>
-                </li>
-              </ul>
-            </div>
-          )}
-
-          {showMenu && isCompact && (
-            <div className="menu-backdrop" onClick={() => setShowMenu(false)} />
+          {mostrarMenu && vistaCompacta && (
+            <div className="menu-backdrop" onClick={() => setMostrarMenu(false)} />
           )}
           
           {/* Dropdown del menú */}
@@ -888,58 +679,60 @@ function TablePage({ table, user, onNavigate, onUpdateUser }) {
         </div>
       </div>
 
-      {/* Mesa de poker con cartas comunitarias */}
-      {(() => {
-        const jugadoresMesa = juegoPoker.players.length > 0 ? juegoPoker.players : jugadores;
-        const indiceUsuarioActual = jugadoresMesa.findIndex((jugador) => jugador?.userId === usuario?.id);
-        return (
-      <PokerTable 
-        maxPlayers={table.maxPlayers}
-        players={tablePlayers}
-        currentPlayerId={user?.id || user?.username} // ID del usuario actual
-        tableColor={table.tableColor}
-        dealerPosition={pokerGame.dealerPosition}
-        smallBlindPosition={pokerGame.smallBlindPosition}
-        bigBlindPosition={pokerGame.bigBlindPosition}
-        communityCards={pokerGame.communityCards}
-        gamePhase={pokerGame.gamePhase}
-        pot={pokerGame.pot}
-        sidePots={pokerGame.sidePots}
-        currentUserIndex={currentUserIndex}
-        currentPlayerIndex={pokerGame.currentPlayerTurn}
-      />
-        );
-      })()}
+      {/* Mesa de poker + acciones en overlay */}
+      <div className="table-game-area">
+        {(() => {
+          const jugadoresMesa = juegoPoker.players.length > 0 ? juegoPoker.players : jugadores;
+          const indiceUsuarioActual = jugadoresMesa.findIndex((jugador) => jugador?.userId === usuario?.id);
+          return (
+        <MesaPoker
+          maxPlayers={mesa.maxPlayers}
+          players={jugadoresMesa}
+          currentPlayerId={usuario?.id || usuario?.username} // ID del usuario actual
+          tableColor={mesa.tableColor}
+          dealerPosition={juegoPoker.dealerPosition}
+          smallBlindPosition={juegoPoker.smallBlindPosition}
+          bigBlindPosition={juegoPoker.bigBlindPosition}
+          communityCards={juegoPoker.communityCards}
+          gamePhase={juegoPoker.gamePhase}
+          pot={juegoPoker.pot}
+          sidePots={juegoPoker.sidePots}
+          currentUserIndex={indiceUsuarioActual}
+          currentPlayerIndex={juegoPoker.currentPlayerTurn}
+        />
+          );
+        })()}
 
-      {/* Acciones de apuestas */}
-      {!esEspectador && juegoPoker.gamePhase !== 'waiting' && (() => {
-        const esMiTurno = juegoPoker.currentPlayerTurn === juegoPoker.playerIndex;
-        console.log('🎮 BettingActions:', {
-          currentPlayerTurn: juegoPoker.currentPlayerTurn,
-          playerIndex: juegoPoker.playerIndex,
-          isMyTurn: esMiTurno,
-          gamePhase: juegoPoker.gamePhase
-        });
-        return (
-          <AccionesApuesta
-            playerChips={juegoPoker.playerChips}
-            currentBet={juegoPoker.currentBet}
-            minRaise={juegoPoker.minRaise}
-            pot={juegoPoker.pot}
-            isPlayerTurn={esMiTurno}
-            canCheck={juegoPoker.canCheck}
-            canCall={juegoPoker.canCall}
-            canRaise={juegoPoker.canRaise}
-            canFold={juegoPoker.canFold}
-            turnTimeRemaining={juegoPoker.turnTimeRemaining}
-            onFold={juegoPoker.handleFold}
-            onCheck={juegoPoker.handleCheck}
-            onCall={juegoPoker.handleCall}
-            onRaise={juegoPoker.handleRaise}
-            onAllIn={juegoPoker.handleAllIn}
-          />
-        );
-      })()}
+        {/* Acciones: solo visibles cuando es tu turno */}
+        {!esEspectador && juegoPoker.gamePhase !== 'waiting' && (() => {
+          const esMiTurno = juegoPoker.currentPlayerTurn === juegoPoker.playerIndex;
+          console.log('🎮 BettingActions:', {
+            currentPlayerTurn: juegoPoker.currentPlayerTurn,
+            playerIndex: juegoPoker.playerIndex,
+            isMyTurn: esMiTurno,
+            gamePhase: juegoPoker.gamePhase
+          });
+          return esMiTurno ? (
+            <AccionesApuesta
+              playerChips={juegoPoker.playerChips}
+              currentBet={juegoPoker.currentBet}
+              minRaise={juegoPoker.minRaise}
+              pot={juegoPoker.pot}
+              isPlayerTurn={esMiTurno}
+              canCheck={juegoPoker.canCheck}
+              canCall={juegoPoker.canCall}
+              canRaise={juegoPoker.canRaise}
+              canFold={juegoPoker.canFold}
+              turnTimeRemaining={juegoPoker.turnTimeRemaining}
+              onFold={juegoPoker.handleFold}
+              onCheck={juegoPoker.handleCheck}
+              onCall={juegoPoker.handleCall}
+              onRaise={juegoPoker.handleRaise}
+              onAllIn={juegoPoker.handleAllIn}
+            />
+          ) : null;
+        })()}
+      </div>
 
       {/* Panel de acciones */}
       {esEspectador && (

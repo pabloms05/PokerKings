@@ -379,4 +379,4 @@ function PokerTable({
   );
 }
 
-export default MesaPoker;
+export default PokerTable;

@@ -1,13 +1,16 @@
-/* Betting Actions Container - Recuadro debajo de la mesa */
+/* Betting Actions Container - Overlay encima de la mesa */
 .betting-actions-container {
-  background: linear-gradient(145deg, #1a1a2e 0%, #0f3460 100%);
+  position: absolute;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  width: min(1000px, calc(100% - 1.5rem));
+  background: linear-gradient(145deg, rgba(26, 26, 46, 0.96) 0%, rgba(15, 52, 96, 0.96) 100%);
   border: 3px solid #daa520;
   border-radius: 15px;
-  padding: 1rem 2rem;
-  margin: 1rem auto 0;
-  max-width: 1200px;
+  padding: 1rem 1.2rem;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
-  z-index: 5;
+  z-index: 70;
   flex-shrink: 0;
 }
 
@@ -389,6 +392,8 @@
 @media (max-width: 1100px) {
   .betting-actions-container {
     padding: 0.75rem 1rem;
+    width: calc(100% - 1rem);
+    bottom: 0.65rem;
   }
   .btn-action {
     padding: 0.75rem 1rem;
@@ -403,6 +408,9 @@
 @media (max-width: 768px) {
   .betting-actions-container {
     padding: 0.6rem 0.75rem;
+    width: calc(100% - 0.8rem);
+    bottom: 0.45rem;
+    border-width: 2px;
   }
 
   .betting-info {

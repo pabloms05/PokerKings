@@ -168,8 +168,8 @@ const useJuegoPoker = (usuario) => {
     });
 
     gameSocket.on('handOver', (handData) => {
-      setLastHandResult(handData);
-      setPlayerHasActed(false);
+      setResultadoUltimaMano(handData);
+      setJugadorYaActuo(false);
     });
 
     gameSocket.on('turnDeadline', (datosLimiteTurno) => {
@@ -265,7 +265,7 @@ const useJuegoPoker = (usuario) => {
         }
 
         if (data.handOver) {
-          setLastHandResult({
+          setResultadoUltimaMano({
             winnerId: data.winnerId || data.winner?.userId || data.winner?.id,
             winnerName: data.winnerName || data.winner?.username || 'Desconocido',
             winnerIds: data.winnerIds || [],

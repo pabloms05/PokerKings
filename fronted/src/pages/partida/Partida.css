@@ -7,6 +7,10 @@
   overflow-y: auto;
 }
 
+.table-game-area {
+  position: relative;
+}
+
 .table-header {
   display: flex;
   justify-content: space-between;
