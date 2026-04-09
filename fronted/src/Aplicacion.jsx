@@ -367,6 +367,7 @@ function App() {
         <TablePage 
           table={currentTable}
           user={user}
+          onUpdateUser={handleUpdateUser}
           onNavigate={handleNavigate}
         />
       )}
