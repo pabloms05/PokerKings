@@ -204,11 +204,13 @@ export const refreshUserMissionProgressDetailed = async (userId, transaction = n
     }
 
     const { progress, completed } = getMissionProgress(mission, user);
-    mission.progress = progress;
+    const requirementCount = Number(mission?.requirement?.count) || 0;
+    mission.progress = mission.completed ? requirementCount : progress;
     const becameCompleted = completed && !mission.completed;
     if (becameCompleted) {
       mission.completed = true;
       mission.completedAt = new Date();
+      mission.progress = requirementCount;
     }
     await mission.save({ transaction });
 
