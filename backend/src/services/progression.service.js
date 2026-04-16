@@ -4,29 +4,29 @@ import { sequelize, User, Mission, Achievement } from '../models/index.js';
 const MISSION_DEFINITIONS = [
   {
     title: 'First Victory',
-    description: 'Win your first game',
-    requirement: { type: 'wins', count: 1 },
+    description: 'Gana 1 mano para arrancar tu racha.',
+    requirement: { type: 'wins', count: 1, rewardExperience: 120 },
     reward: 500,
     type: 'permanent'
   },
   {
     title: 'Chip Collector',
-    description: 'Accumulate 10,000 chips',
-    requirement: { type: 'chips', count: 10000 },
+    description: 'Alcanza 10,000 fichas en tu balance.',
+    requirement: { type: 'chips', count: 10000, rewardExperience: 220 },
     reward: 1000,
     type: 'permanent'
   },
   {
     title: 'Daily Player',
-    description: 'Play 5 games today',
-    requirement: { type: 'games', count: 5 },
+    description: 'Juega 5 manos hoy para mantener actividad.',
+    requirement: { type: 'games', count: 5, rewardExperience: 80 },
     reward: 250,
     type: 'daily'
   },
   {
-    title: 'High Roller',
-    description: 'Win 10 games',
-    requirement: { type: 'wins', count: 10 },
+    title: 'High roller',
+    description: 'Consigue 10 victorias en total.',
+    requirement: { type: 'wins', count: 10, rewardExperience: 450 },
     reward: 2000,
     type: 'permanent'
   }
@@ -131,6 +131,38 @@ export const ensureUserMissions = async (userId, transaction = null) => {
 
   const existingTitles = new Set(existingMissions.map((mission) => mission.title));
   const missingMissions = MISSION_DEFINITIONS.filter((mission) => !existingTitles.has(mission.title));
+  const existingByTitle = new Map(existingMissions.map((mission) => [mission.title, mission]));
+
+  for (const missionDefinition of MISSION_DEFINITIONS) {
+    const existingMission = existingByTitle.get(missionDefinition.title);
+    if (!existingMission) continue;
+
+    const requirement = {
+      ...(existingMission.requirement || {}),
+      rewardExperience: Number(existingMission?.requirement?.rewardExperience)
+        || Number(missionDefinition?.requirement?.rewardExperience)
+        || 0
+    };
+
+    let changed = false;
+    if (existingMission.description !== missionDefinition.description) {
+      existingMission.description = missionDefinition.description;
+      changed = true;
+    }
+    if (Number(existingMission.reward) !== Number(missionDefinition.reward)) {
+      existingMission.reward = missionDefinition.reward;
+      changed = true;
+    }
+    if (JSON.stringify(existingMission.requirement || {}) !== JSON.stringify(requirement)) {
+      existingMission.requirement = requirement;
+      changed = true;
+    }
+
+    if (changed) {
+      await existingMission.save({ transaction });
+    }
+  }
+
   if (missingMissions.length === 0) return;
 
   await Mission.bulkCreate(

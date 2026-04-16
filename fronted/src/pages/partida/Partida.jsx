@@ -266,8 +266,9 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     const inicializarJuego = async () => {
       if (!mesa || !usuario) return;
 
-      setCargando(true);
-      setErrorVista(null);
+      try {
+        setCargando(true);
+        setErrorVista(null);
 
         // ESPERAR a unirse a la sala de WebSocket de la mesa ANTES de hacer startGame
         console.log(`🔌 Uniendose a sala de WebSocket: table_${mesa.id}`);

@@ -72,7 +72,11 @@ function MisionesOffcanvas({ show, onHide, userId }) {
         ></button>
       </div>
       <div className="offcanvas-body">
-        {misiones.length === 0 ? (
+        {loading ? (
+          <div className="text-center text-muted py-5">
+            <p>Cargando misiones...</p>
+          </div>
+        ) : misiones.length === 0 ? (
           <div className="text-center text-muted py-5">
             <p>No hay misiones disponibles</p>
             <small>Las misiones diarias se actualizarán pronto</small>
@@ -82,19 +86,42 @@ function MisionesOffcanvas({ show, onHide, userId }) {
             {misiones.map(mision => (
               <div key={mision.id} className="list-group-item">
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                  <h6 className="mb-0">{mision.nombre}</h6>
-                  <span className="badge bg-warning text-dark">
-                    💰 {mision.recompensa} fichas
-                  </span>
+                  <h6 className="mb-0">{mision.title}</h6>
+                  <div className="d-flex gap-2">
+                    <span className="badge bg-warning text-dark">
+                      💰 {Number(mision.reward || 0).toLocaleString()} fichas
+                    </span>
+                    <span className="badge bg-info text-dark">
+                      ⭐ {Number(mision.rewardExperience || 0).toLocaleString()} XP
+                    </span>
+                  </div>
                 </div>
+                <p className="mb-2 text-muted small">{mision.description || 'Completa el objetivo para obtener recompensas.'}</p>
                 <div className="progress">
                   <div 
                     className="progress-bar" 
-                    style={{ width: `${(mision.progreso / mision.total) * 100}%` }}
+                    style={{ width: `${Math.min(100, ((Number(mision.progress || 0) / Math.max(1, Number(mision?.requirement?.count || 1))) * 100))}%` }}
                   >
-                    {mision.progreso}/{mision.total}
+                    {Number(mision.progress || 0)}/{Number(mision?.requirement?.count || 0)}
                   </div>
                 </div>
+                {mision.completed && (
+                  <div className="mt-2 d-flex justify-content-between align-items-center">
+                    <span className="text-success">✅ Completada</span>
+                    {mision.claimed ? (
+                      <span className="badge bg-secondary">Recompensa reclamada</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-success"
+                        disabled={!mision.claimable || claimingMissionId === mision.id}
+                        onClick={() => reclamarRecompensa(mision.id)}
+                      >
+                        {claimingMissionId === mision.id ? 'Reclamando...' : 'Reclamar'}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
