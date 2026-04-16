@@ -8,58 +8,73 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
   const [cargando, setCargando] = useState(false);
   const [errorInicio, setErrorInicio] = useState('');
 
-  const manejarEnvio = async (evento) => {
+  const iniciarSesion = (identificadorLogin, contrasenaLogin, alFinalizar) => {
+    authService.login(identificadorLogin, contrasenaLogin).then(
+      (resultado) => {
+        if (resultado.success) {
+          if (alIniciarSesionExito) {
+            alIniciarSesionExito(resultado.user);
+          }
+          return;
+        }
+
+        setErrorInicio(resultado.error || 'Error al iniciar sesión');
+      },
+      (errorDeConexion) => {
+        console.error('Error en login:', errorDeConexion);
+        setErrorInicio('Error de conexión con el servidor');
+      }
+    ).then(() => {
+      if (alFinalizar) {
+        alFinalizar();
+      }
+    });
+  };
+
+  const manejarEnvio = (evento) => {
     evento.preventDefault();
     setErrorInicio('');
     setCargando(true);
 
-    try {
-      // Llamar al servicio de autenticación
-      const resultado = await authService.login(identificador, contrasena);
-
-      if (resultado.success) {
-        console.log('✅ Login exitoso:', resultado.user);
-        // Notificar al componente padre
-        if (alIniciarSesionExito) {
-          alIniciarSesionExito(resultado.user);
-        }
-      } else {
-        setErrorInicio(resultado.error || 'Error al iniciar sesión');
-      }
-    } catch (err) {
-      console.error('Error en login:', err);
-      setErrorInicio('Error de conexión con el servidor');
-    } finally {
+    iniciarSesion(identificador, contrasena, () => {
       setCargando(false);
-    }
+    });
   };
 
   // Login rápido para pruebas
-  const manejarLoginRapido = async (numeroUsuario) => {
+  const manejarLoginRapido = (numeroUsuario) => {
     setErrorInicio('');
     setCargando(true);
-    try {
-      const email = `jugador${numeroUsuario}@pokerkings.com`;
-      console.log('🔐 Intentando login con:', email);
-      
-      const resultado = await authService.login(email, 'password123');
-      
-      console.log('📊 Resultado del login:', resultado);
-      
-      if (resultado.success) {
-        console.log('✅ Login exitoso:', resultado.user);
-        alIniciarSesionExito(resultado.user);
-      } else {
-        console.error('❌ Login fallido:', resultado.error);
-        setErrorInicio(resultado.error || 'Error al iniciar sesión');
-      }
-    } catch (err) {
-      console.error('💥 Error en login rápido:', err);
-      setErrorInicio(`Error: ${err.message}`);
-    } finally {
+
+    const correoPrueba = `jugador${numeroUsuario}@pokerkings.com`;
+    iniciarSesion(correoPrueba, 'password123', () => {
       setCargando(false);
-    }
+    });
   };
+
+  const manejarCambioIdentificador = (eventoIdentificador) => {
+    setIdentificador(eventoIdentificador.target.value);
+  };
+
+  const manejarCambioContrasena = (eventoContrasena) => {
+    setContrasena(eventoContrasena.target.value);
+  };
+
+  let contenidoBoton = (
+    <>
+      <span>🎮</span>
+      Iniciar Sesión
+    </>
+  );
+
+  if (cargando) {
+    contenidoBoton = (
+      <>
+        <span className="spinner"></span>
+        Iniciando sesión...
+      </>
+    );
+  }
 
   return (
     <div className="login-container">
@@ -92,7 +107,7 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
               id="identifier"
               placeholder="correo@ejemplo.com o PokerKing123"
               value={identificador}
-              onChange={(e) => setIdentificador(e.target.value)}
+              onChange={manejarCambioIdentificador}
               required
               disabled={cargando}
               autoComplete="username"
@@ -111,7 +126,7 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
               id="password"
               placeholder="••••••••••••"
               value={contrasena}
-              onChange={(e) => setContrasena(e.target.value)}
+              onChange={manejarCambioContrasena}
               required
               disabled={cargando}
             />
@@ -123,17 +138,7 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
             className="btn-login"
             disabled={cargando}
           >
-            {cargando ? (
-              <>
-                <span className="spinner"></span>
-                Iniciando sesión...
-              </>
-            ) : (
-              <>
-                <span>🎮</span>
-                Iniciar Sesión
-              </>
-            )}
+            {contenidoBoton}
           </button>
         </form>
 

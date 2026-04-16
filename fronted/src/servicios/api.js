@@ -27,7 +27,7 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response && error.response.status === 401) {
       // Token expirado o inválido — limpiar sesión y notificar a la app
       sessionStorage.removeItem('token');
       sessionStorage.removeItem('user');

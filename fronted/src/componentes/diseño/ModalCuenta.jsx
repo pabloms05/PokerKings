@@ -14,14 +14,20 @@ const AVATAR_OPTIONS = [
 ];
 
 function AccountModal({ show, onHide, user, onUpdateAvatar }) {
-  const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || '🎮');
+  const [selectedAvatar, setSelectedAvatar] = useState(() => {
+    let avatarInicial = '🎮';
+    if (user && user.avatar) {
+      avatarInicial = user.avatar;
+    }
+    return avatarInicial;
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false); // FIX: Estado de carga
 
   // Encontrar el índice del avatar actual
   useEffect(() => {
-    if (user?.avatar) {
+    if (user && user.avatar) {
       const index = AVATAR_OPTIONS.indexOf(user.avatar);
       if (index !== -1) {
         setCurrentIndex(index);
@@ -44,24 +50,32 @@ function AccountModal({ show, onHide, user, onUpdateAvatar }) {
     setHasChanges(AVATAR_OPTIONS[newIndex] !== user?.avatar);
   };
 
-  const handleSave = async () => {
-    if (onUpdateAvatar && hasChanges) {
-      // FIX: Mostrar indicador de carga
-      setSaving(true);
-      try {
-        await onUpdateAvatar(selectedAvatar);
-        setHasChanges(false);
-      } catch (error) {
-        console.error('Error guardando avatar:', error);
-      } finally {
-        setSaving(false);
-      }
+  const handleSave = () => {
+    if (!onUpdateAvatar || !hasChanges) {
+      return;
     }
+
+    setSaving(true);
+    Promise.resolve(onUpdateAvatar(selectedAvatar)).then(
+      () => {
+        setHasChanges(false);
+      },
+      (errorGuardado) => {
+        console.error('Error guardando avatar:', errorGuardado);
+      }
+    ).then(() => {
+      setSaving(false);
+    });
   };
 
   const handleCancel = () => {
-    setSelectedAvatar(user?.avatar || '🎮');
-    const index = AVATAR_OPTIONS.indexOf(user?.avatar || '🎮');
+    let avatarActual = '🎮';
+    if (user && user.avatar) {
+      avatarActual = user.avatar;
+    }
+
+    setSelectedAvatar(avatarActual);
+    const index = AVATAR_OPTIONS.indexOf(avatarActual);
     if (index !== -1) {
       setCurrentIndex(index);
     }
@@ -71,9 +85,22 @@ function AccountModal({ show, onHide, user, onUpdateAvatar }) {
 
   if (!show) return null;
 
+  let contenidoBotonGuardar = '✓ Sin Cambios';
+  if (hasChanges) {
+    contenidoBotonGuardar = '💾 Guardar Cambios';
+  }
+  if (saving) {
+    contenidoBotonGuardar = (
+      <>
+        <span className="spinner">⏳</span>
+        Guardando...
+      </>
+    );
+  }
+
   return (
     <div className="account-modal-overlay" onClick={handleCancel}>
-      <div className="account-modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="account-modal-content" onClick={(eventoClick) => eventoClick.stopPropagation()}>
         <div className="account-modal-header">
           <h2>👤 Mi Cuenta</h2>
           <button className="btn-close-modal" onClick={handleCancel}>✕</button>
@@ -133,10 +160,16 @@ function AccountModal({ show, onHide, user, onUpdateAvatar }) {
             <div className="avatar-preview-strip">
               {[-2, -1, 0, 1, 2].map((offset) => {
                 const index = (currentIndex + offset + AVATAR_OPTIONS.length) % AVATAR_OPTIONS.length;
+
+                let clasePreview = 'preview-avatar';
+                if (offset === 0) {
+                  clasePreview = 'preview-avatar active';
+                }
+
                 return (
                   <div 
                     key={offset}
-                    className={`preview-avatar ${offset === 0 ? 'active' : ''}`}
+                    className={clasePreview}
                     onClick={() => {
                       setCurrentIndex(index);
                       setSelectedAvatar(AVATAR_OPTIONS[index]);
@@ -160,16 +193,7 @@ function AccountModal({ show, onHide, user, onUpdateAvatar }) {
             onClick={handleSave}
             disabled={!hasChanges || saving}
           >
-            {saving ? (
-              <>
-                <span className="spinner">⏳</span>
-                Guardando...
-              </>
-            ) : hasChanges ? (
-              '💾 Guardar Cambios'
-            ) : (
-              '✓ Sin Cambios'
-            )}
+            {contenidoBotonGuardar}
           </button>
         </div>
       </div>

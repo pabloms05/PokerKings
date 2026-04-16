@@ -43,21 +43,30 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
   }, [amigos]);
 
   useEffect(() => {
-    if (!mesa?.id) return;
+    if (!mesa || !mesa.id) return;
 
     const alHistorialChat = (payload) => {
-      if (String(payload?.tableId) !== String(mesa.id)) return;
-      setMensajesChat(Array.isArray(payload?.messages) ? payload.messages : []);
+      if (!payload || String(payload.tableId) !== String(mesa.id)) return;
+
+      let mensajesRecibidos = [];
+      if (Array.isArray(payload.messages)) {
+        mensajesRecibidos = payload.messages;
+      }
+
+      setMensajesChat(mensajesRecibidos);
     };
 
     const alMensajeChat = (mensajeChat) => {
-      if (String(mensajeChat?.tableId) !== String(mesa.id)) return;
+      if (!mensajeChat || String(mensajeChat.tableId) !== String(mesa.id)) return;
       setMensajesChat((previo) => [...previo, mensajeChat].slice(-120));
-      if (!chatAbierto && String(mensajeChat?.userId) !== String(usuario?.id)) {
+      const idUsuarioMensaje = mensajeChat ? mensajeChat.userId : undefined;
+      const idUsuarioActual = usuario ? usuario.id : undefined;
+      if (!chatAbierto && String(idUsuarioMensaje) !== String(idUsuarioActual)) {
         setContadorNoLeidosChat((previo) => previo + 1);
       }
     };
 
+    // Suscribir eventos del chat de esta mesa.
     gameSocket.on('tableChatHistory', alHistorialChat);
     gameSocket.on('tableChatMessage', alMensajeChat);
 
@@ -87,11 +96,13 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
       const idUsuarioAmigo = String(payload?.userId || '');
       if (!idUsuarioAmigo) return;
 
-      setAmigos((previo) => previo.map((amigo) => (
-        String(amigo?.id) === idUsuarioAmigo
-          ? { ...amigo, online: !!payload?.online }
-          : amigo
-      )));
+      setAmigos((amigosPrevios) => amigosPrevios.map((amigo) => {
+        if (amigo && String(amigo.id) === idUsuarioAmigo) {
+          return { ...amigo, online: !!payload?.online };
+        }
+
+        return amigo;
+      }));
     };
 
     const alSnapshotPresencia = (payload) => {
@@ -106,6 +117,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     socketService.onFriendsPresenceSnapshot(alSnapshotPresencia);
     socketService.requestFriendsPresenceSnapshot();
 
+    // Refrescamos presencia cada pocos segundos para no mostrar estados viejos.
     const idIntervaloSnapshot = setInterval(() => {
       socketService.requestFriendsPresenceSnapshot();
     }, 2000);
@@ -120,22 +132,25 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
   useEffect(() => {
     if (!mostrarModalInvitacion) return;
 
-    const refrescarEstadoOnline = async () => {
+    const refrescarEstadoOnline = () => {
       const idsAmigos = referenciaAmigos.current.map((amigo) => amigo?.id).filter(Boolean);
       if (idsAmigos.length === 0) return;
 
-      try {
-        const response = await friendAPI.getOnlineStatus(idsAmigos);
-        const estadoEnLinea = response?.data?.onlineStatus || {};
-        setAmigos((previo) => previo.map((amigo) => ({
-          ...amigo,
-          online: !!estadoEnLinea[String(amigo?.id)]
-        })));
-      } catch (err) {
-        console.warn('No se pudo refrescar online-status en vivo:', err?.message || err);
-      }
+      friendAPI.getOnlineStatus(idsAmigos).then(
+        (respuestaOnline) => {
+          const estadoEnLinea = respuestaOnline?.data?.onlineStatus || {};
+          setAmigos((amigosPrevios) => amigosPrevios.map((amigo) => ({
+            ...amigo,
+            online: !!estadoEnLinea[String(amigo?.id)]
+          })));
+        },
+        (errorOnline) => {
+          console.warn('No se pudo refrescar online-status en vivo:', errorOnline?.message || errorOnline);
+        }
+      );
     };
 
+    // Doble capa: evento realtime + consulta REST periódica para mayor consistencia.
     refrescarEstadoOnline();
     const idIntervalo = setInterval(refrescarEstadoOnline, 1500);
 
@@ -145,16 +160,30 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
   // Usar el hook de juego de póker (conectado con backend)
   const juegoPoker = useJuegoPoker(usuario);
 
-  const refrescarSaldoUsuario = async () => {
-    if (!usuario?.id || !alActualizarUsuario) return;
-
-    try {
-      const response = await userAPI.getUserById(usuario.id);
-      const usuarioActualizado = { ...usuario, ...response?.data, chips: Number(response?.data?.chips ?? usuario.chips ?? 0) };
-      alActualizarUsuario(usuarioActualizado);
-    } catch (error) {
-      console.warn('No se pudo refrescar saldo de usuario:', error?.message || error);
+  const refrescarSaldoUsuario = () => {
+    if (!usuario || !usuario.id || !alActualizarUsuario) {
+      return Promise.resolve();
     }
+
+    return userAPI.getUserById(usuario.id).then(
+      (respuestaUsuario) => {
+        let fichasActualizadas = Number(usuario.chips || 0);
+        if (
+          respuestaUsuario &&
+          respuestaUsuario.data &&
+          respuestaUsuario.data.chips !== undefined &&
+          respuestaUsuario.data.chips !== null
+        ) {
+          fichasActualizadas = Number(respuestaUsuario.data.chips) || 0;
+        }
+
+        const usuarioActualizado = { ...usuario, ...respuestaUsuario?.data, chips: fichasActualizadas };
+        alActualizarUsuario(usuarioActualizado);
+      },
+      (errorUsuario) => {
+        console.warn('No se pudo refrescar saldo de usuario:', errorUsuario?.message || errorUsuario);
+      }
+    );
   };
 
   // Sincronizar jugadores desde el backend
@@ -179,10 +208,16 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
         const ganadores = juegoPoker.lastHandResult.winners || [];
         const yoGane = (juegoPoker.lastHandResult.winnerIds || []).includes(usuario?.id) || juegoPoker.lastHandResult.winnerId === usuario?.id;
 
+        let nombreGanador = 'Desconocido';
+        if (ganadores.length > 1) {
+          const nombresGanadores = ganadores.map((ganador) => ganador.username).filter(Boolean).join(', ');
+          nombreGanador = nombresGanadores || juegoPoker.lastHandResult.winnerName || 'Empate';
+        } else {
+          nombreGanador = juegoPoker.lastHandResult.winnerName || ganadores[0]?.username || 'Desconocido';
+        }
+
         setDatosPopupGanador({
-          winnerName: ganadores.length > 1
-            ? (ganadores.map((ganador) => ganador.username).filter(Boolean).join(', ') || juegoPoker.lastHandResult.winnerName || 'Empate')
-            : (juegoPoker.lastHandResult.winnerName || ganadores[0]?.username || 'Desconocido'),
+          winnerName: nombreGanador,
           potWon: juegoPoker.lastHandResult.potWon ?? 0,
           esTuVictoria: !!yoGane
         });
@@ -213,57 +248,50 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
 
   // Inicializar el juego desde el backend
   useEffect(() => {
-    const inicializarJuego = async () => {
+    const inicializarJuego = () => {
       if (!mesa || !usuario) return;
 
-      try {
-        setCargando(true);
-        setErrorVista(null);
+      setCargando(true);
+      setErrorVista(null);
 
-        // ESPERAR a unirse a la sala de WebSocket de la mesa ANTES de hacer startGame
-        console.log(`🔌 Uniendose a sala de WebSocket: table_${mesa.id}`);
-        try {
-          await gameSocket.joinTable(mesa.id);
-          console.log(`✅ Socket unido a la sala. Procediendo con startGame...`);
-        } catch (socketErr) {
-          console.error('⚠️ Error al unirse a WebSocket:', socketErr.message);
-          // Continuar de todas formas, pero puede haber problemas de sync
+      console.log(`🔌 Uniendose a sala de WebSocket: table_${mesa.id}`);
+      gameSocket.joinTable(mesa.id).then(
+        () => {
+          console.log('✅ Socket unido a la sala. Procediendo con startGame...');
+        },
+        (errorSocket) => {
+          console.error('⚠️ Error al unirse a WebSocket:', errorSocket.message);
         }
+      ).then(() => {
+        const idsJugadores = [usuario.id];
 
-        // Crear lista de jugadores para el backend
-        const idsJugadores = [usuario.id]; // Comenzar con el usuario actual
-        
-        // El backend manejará agregar más jugadores si existen en la mesa
-        // Por ahora, solo enviar el usuario actual
-        
-        // Iniciar el juego en el backend
-        const response = await gameAPI.startGame(mesa.id, idsJugadores);
-        
-        // El backend devuelve response.data.game con el estado del juego
-        const datosJuego = response.data.game || response.data;
-        const idJuego = datosJuego.id;
-        
-        if (idJuego) {
-          // Guardar el ID del juego
-          juegoPoker.setGameId(idJuego);
+        gameAPI.startGame(mesa.id, idsJugadores).then(
+          (respuestaInicio) => {
+            const datosJuego = respuestaInicio.data.game || respuestaInicio.data;
+            const idJuego = datosJuego.id;
 
-          // Hidratar estado local inmediatamente con jugadores
-          if (Array.isArray(datosJuego.players)) {
-            setJugadores(datosJuego.players);
+            if (idJuego) {
+              juegoPoker.setGameId(idJuego);
+              if (Array.isArray(datosJuego.players)) {
+                setJugadores(datosJuego.players);
+              }
+
+              console.log('✅ Juego iniciado/unido:', idJuego);
+              refrescarSaldoUsuario().then(() => {
+                setCargando(false);
+              });
+            } else {
+              console.error('⚠️ No se recibió ID de juego del backend', respuestaInicio.data);
+              setCargando(false);
+            }
+          },
+          (errorInicio) => {
+            console.error('❌ Error al iniciar el juego:', errorInicio);
+            setErrorVista('No se pudo iniciar el juego. Intenta de nuevo.');
+            setCargando(false);
           }
-          
-          // El hook usePokerGame recibirá actualizaciones de todo el estado via WebSocket
-          console.log('✅ Juego iniciado/unido:', idJuego);
-          await refrescarSaldoUsuario();
-        } else {
-          console.error('⚠️ No se recibió ID de juego del backend', response.data);
-        }
-      } catch (err) {
-        console.error('❌ Error al iniciar el juego:', err);
-        setErrorVista('No se pudo iniciar el juego. Intenta de nuevo.');
-      } finally {
-        setCargando(false);
-      }
+        );
+      });
     };
 
     // Esperar un poco antes de inicializar (para que el WebSocket esté listo)
@@ -273,36 +301,42 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
 
     return () => {
       clearTimeout(temporizador);
-      if (mesa?.id) {
+      if (mesa && mesa.id) {
         gameSocket.leaveTable(mesa.id);
       }
     };
   }, [mesa, usuario]);
 
   // Manejar levantarse (modo espectador)
-  const manejarLevantarse = async () => {
-    try {
-      if (juegoPoker.gameId) {
-        await gameAPI.leaveGame(juegoPoker.gameId, usuario?.id);
+  const manejarLevantarse = () => {
+    let promesaSalida = Promise.resolve();
+    if (juegoPoker.gameId) {
+      promesaSalida = gameAPI.leaveGame(juegoPoker.gameId, usuario?.id);
+    }
+
+    promesaSalida.then(
+      () => refrescarSaldoUsuario(),
+      (errorSalida) => {
+        console.error('Error al cambiar a modo espectador:', errorSalida);
+        return refrescarSaldoUsuario();
+      }
+    ).then(() => {
+      if (!mesa || !mesa.id) {
+        return Promise.resolve();
       }
 
-      await refrescarSaldoUsuario();
-
-      if (mesa?.id) {
-        // Fuerza sync global del estado de la mesa para los demás clientes,
-        // y vuelve a unir este cliente como espectador.
-        gameSocket.leaveTable(mesa.id);
-        try {
-          await gameSocket.joinTable(mesa.id);
-        } catch (socketErr) {
-          console.warn('⚠️ No se pudo re-unir como espectador tras levantarse:', socketErr.message);
+      gameSocket.leaveTable(mesa.id);
+      return gameSocket.joinTable(mesa.id).then(
+        () => {},
+        (errorSocket) => {
+          console.warn('⚠️ No se pudo re-unir como espectador tras levantarse:', errorSocket.message);
         }
-      }
-
-      // Mantenerse en la sala de la mesa para recibir estado como espectador.
-      // Además, actualizar localmente para que el asiento se libere al instante.
+      );
+    }).then(() => {
       juegoPoker.setPlayers((jugadoresPrevios) => jugadoresPrevios.map((jugador) => {
-        if (String(jugador?.userId) !== String(usuario?.id)) {
+        const idJugador = jugador ? jugador.userId : undefined;
+        const idUsuarioActual = usuario ? usuario.id : undefined;
+        if (String(idJugador) !== String(idUsuarioActual)) {
           return jugador;
         }
 
@@ -322,69 +356,82 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
       setEsEspectador(true);
       setMostrarMenu(false);
       console.log('👁️ Usuario cambió a modo espectador');
-    } catch (err) {
-      console.error('Error al cambiar a modo espectador:', err);
-    }
+    });
   };
 
   // Manejar volver a sentarse
-  const manejarSentarse = async () => {
-    try {
-      if (mesa && usuario) {
-        // Re-unirse a la sala de WebSocket (por si se había desconectado)
-        try {
-          await gameSocket.joinTable(mesa.id);
-          console.log(`✅ Socket re-unido a la sala. Procediendo con startGame...`);
-        } catch (socketErr) {
-          console.error('⚠️ Error al re-unirse a WebSocket:', socketErr.message);
-        }
-
-        const response = await gameAPI.startGame(mesa.id, [usuario.id]);
-        const datosJuego = response.data?.game || response.data;
-        if (datosJuego?.id) {
-          juegoPoker.setGameId(datosJuego.id);
-          if (Array.isArray(datosJuego.players)) {
-            setJugadores(datosJuego.players);
-          }
-        }
-        await refrescarSaldoUsuario();
-      }
+  const manejarSentarse = () => {
+    if (!mesa || !usuario) {
       setEsEspectador(false);
       setMostrarMenu(false);
-      console.log('🪡 Usuario volvió a sentarse en la mesa');
-    } catch (err) {
-      console.error('Error al volver a sentarse:', err);
+      return;
     }
+
+    gameSocket.joinTable(mesa.id).then(
+      () => {
+        console.log('✅ Socket re-unido a la sala. Procediendo con startGame...');
+      },
+      (errorSocket) => {
+        console.error('⚠️ Error al re-unirse a WebSocket:', errorSocket.message);
+      }
+    ).then(() => {
+      gameAPI.startGame(mesa.id, [usuario.id]).then(
+        (respuestaInicio) => {
+          const datosJuego = respuestaInicio.data?.game || respuestaInicio.data;
+          if (datosJuego && datosJuego.id) {
+            juegoPoker.setGameId(datosJuego.id);
+            if (Array.isArray(datosJuego.players)) {
+              setJugadores(datosJuego.players);
+            }
+          }
+
+          refrescarSaldoUsuario().then(() => {
+            setEsEspectador(false);
+            setMostrarMenu(false);
+            console.log('🪡 Usuario volvió a sentarse en la mesa');
+          });
+        },
+        (errorSentarse) => {
+          console.error('Error al volver a sentarse:', errorSentarse);
+        }
+      );
+    });
   };
 
   // Manejar abandonar partida
-  const manejarSalirMesa = async () => {
-    const ejecutarSalida = async () => {
-      try {
-        if (juegoPoker.gameId) {
-          await gameAPI.leaveGame(juegoPoker.gameId, usuario?.id);
+  const manejarSalirMesa = () => {
+    const ejecutarSalida = () => {
+      let promesaSalida = Promise.resolve();
+      if (juegoPoker.gameId) {
+        promesaSalida = gameAPI.leaveGame(juegoPoker.gameId, usuario?.id);
+      }
+
+      promesaSalida.then(
+        () => refrescarSaldoUsuario(),
+        (errorSalida) => {
+          console.error('Error abandonando el juego:', errorSalida);
+          return refrescarSaldoUsuario();
         }
-        await refrescarSaldoUsuario();
-        if (mesa?.id) {
+      ).then(() => {
+        if (mesa && mesa.id) {
           gameSocket.leaveTable(mesa.id);
         }
-      } catch (leaveErr) {
-        console.error('Error abandonando el juego:', leaveErr);
-      }
-      toast.success('Has abandonado la mesa', { id: 'leave-success' });
-      alNavegar('inicio');
+
+        toast.success('Has abandonado la mesa', { id: 'leave-success' });
+        alNavegar('inicio');
+      });
     };
 
     toast.dismiss('leave-confirm');
     
-    toast((t) => (
+    toast((instanciaToast) => (
       <div style={{ textAlign: 'center' }}>
         <p style={{ marginBottom: '1rem' }}>¿Abandonar la partida?</p>
         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
           <button
-            onClick={async () => {
-              toast.dismiss(t.id);
-              await ejecutarSalida();
+            onClick={() => {
+              toast.dismiss(instanciaToast.id);
+              ejecutarSalida();
             }}
             style={{
               background: '#c41e3a',
@@ -399,7 +446,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
             Sí, salir
           </button>
           <button
-            onClick={() => toast.dismiss(t.id)}
+            onClick={() => toast.dismiss(instanciaToast.id)}
             style={{
               background: '#0b6623',
               color: 'white',
@@ -417,72 +464,87 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     ), { duration: 5000, id: 'leave-confirm' });
   };
 
-  const manejarEnviarChat = async (evento) => {
+  const manejarEnviarChat = (evento) => {
     evento.preventDefault();
     const texto = entradaChat.trim();
-    if (!texto || !mesa?.id || enviandoChat) return;
+    if (!texto || !mesa || !mesa.id || enviandoChat) return;
 
     if (texto.length > MAXIMO_CARACTERES_CHAT) {
       toast.error(`El mensaje no puede superar ${MAXIMO_CARACTERES_CHAT} caracteres`);
       return;
     }
 
-    try {
-      setEnviandoChat(true);
-      await gameSocket.sendTableChatMessage(mesa.id, texto);
-      setEntradaChat('');
-    } catch (error) {
-      toast.error(error?.message || 'No se pudo enviar el mensaje');
-    } finally {
+    setEnviandoChat(true);
+    gameSocket.sendTableChatMessage(mesa.id, texto).then(
+      () => {
+        setEntradaChat('');
+      },
+      (errorChat) => {
+        toast.error(errorChat?.message || 'No se pudo enviar el mensaje');
+      }
+    ).then(() => {
       setEnviandoChat(false);
-    }
+    });
   };
 
   // Manejar invitar a un amigo
-  const manejarAbrirInvitar = async () => {
+  const manejarAbrirInvitar = () => {
     setCargandoAmigos(true);
-    try {
-      const response = await friendAPI.getFriends();
-      const lista = Array.isArray(response?.data) ? response.data : [];
-
-      const idsAmigos = lista.map((amigo) => amigo.id).filter(Boolean);
-      let estadoEnLinea = {};
-
-      if (idsAmigos.length > 0) {
-        try {
-          const respuestaOnline = await friendAPI.getOnlineStatus(idsAmigos);
-          estadoEnLinea = respuestaOnline?.data?.onlineStatus || {};
-        } catch (onlineErr) {
-          console.warn('No se pudo consultar estado online de amigos:', onlineErr?.message || onlineErr);
+    friendAPI.getFriends().then(
+      (respuestaAmigos) => {
+        let listaAmigos = [];
+        if (respuestaAmigos && Array.isArray(respuestaAmigos.data)) {
+          listaAmigos = respuestaAmigos.data;
         }
-      }
 
-      setAmigos(lista.map((amigo) => ({
-        ...amigo,
-        online: !!estadoEnLinea[String(amigo.id)]
-      })));
-    } catch (err) {
-      console.error('Error cargando amigos:', err);
-      toast.error('No se pudo cargar la lista de amigos');
-      setAmigos([]);
-    } finally {
+        const idsAmigos = listaAmigos.map((amigo) => amigo.id).filter(Boolean);
+        if (idsAmigos.length === 0) {
+          setAmigos(listaAmigos);
+          return Promise.resolve();
+        }
+
+        return friendAPI.getOnlineStatus(idsAmigos).then(
+          (respuestaOnline) => {
+            const estadoEnLinea = respuestaOnline?.data?.onlineStatus || {};
+            setAmigos(listaAmigos.map((amigo) => ({
+              ...amigo,
+              online: !!estadoEnLinea[String(amigo.id)]
+            })));
+          },
+          (errorOnline) => {
+            console.warn('No se pudo consultar estado online de amigos:', errorOnline?.message || errorOnline);
+            setAmigos(listaAmigos.map((amigo) => ({
+              ...amigo,
+              online: false
+            })));
+          }
+        );
+      },
+      (errorAmigos) => {
+        console.error('Error cargando amigos:', errorAmigos);
+        toast.error('No se pudo cargar la lista de amigos');
+        setAmigos([]);
+      }
+    ).then(() => {
       setCargandoAmigos(false);
-    }
-    setMostrarModalInvitacion(true);
-    setMostrarMenu(false);
+      setMostrarModalInvitacion(true);
+      setMostrarMenu(false);
+    });
   };
 
   // Manejar selección de amigos
   const alternarSeleccionAmigo = (idAmigo) => {
-    setAmigosSeleccionados((previo) =>
-      previo.includes(idAmigo)
-        ? previo.filter((id) => id !== idAmigo)
-        : [...previo, idAmigo]
-    );
+    setAmigosSeleccionados((seleccionPrevio) => {
+      if (seleccionPrevio.includes(idAmigo)) {
+        return seleccionPrevio.filter((idSeleccionado) => idSeleccionado !== idAmigo);
+      }
+
+      return [...seleccionPrevio, idAmigo];
+    });
   };
 
   // Enviar invitaciones
-  const manejarEnviarInvitaciones = async () => {
+  const manejarEnviarInvitaciones = () => {
     if (!juegoPoker.gameId) {
       toast.error('La partida aún no está lista para enviar invitaciones');
       return;
@@ -493,24 +555,44 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
       return;
     }
 
-    try {
-      const response = await gameAPI.inviteFriends(juegoPoker.gameId, amigosSeleccionados);
-      const enviadas = response?.data?.invitedCount ?? amigosSeleccionados.length;
-      const rechazadas = (response?.data?.rejectedFriendIds || []).length;
+    gameAPI.inviteFriends(juegoPoker.gameId, amigosSeleccionados).then(
+      (respuestaInvitaciones) => {
+        let enviadas = amigosSeleccionados.length;
+        if (
+          respuestaInvitaciones &&
+          respuestaInvitaciones.data &&
+          respuestaInvitaciones.data.invitedCount !== undefined &&
+          respuestaInvitaciones.data.invitedCount !== null
+        ) {
+          enviadas = respuestaInvitaciones.data.invitedCount;
+        }
 
-      if (enviadas > 0) {
-        toast.success(`📨 ${enviadas} invitación${enviadas > 1 ? 'es' : ''} enviada${enviadas > 1 ? 's' : ''}`, { id: 'send-invites' });
-      }
-      if (rechazadas > 0) {
-        toast.error(`${rechazadas} invitación${rechazadas > 1 ? 'es no válidas' : ' no válida'} no se pudo enviar`);
-      }
+        const rechazadas = (respuestaInvitaciones?.data?.rejectedFriendIds || []).length;
 
-      setMostrarModalInvitacion(false);
-      setAmigosSeleccionados([]);
-    } catch (err) {
-      console.error('Error enviando invitaciones:', err);
-      toast.error(err?.response?.data?.error || 'No se pudieron enviar las invitaciones');
-    }
+        if (enviadas > 0) {
+          let textoExito = `📨 ${enviadas} invitación enviada`;
+          if (enviadas > 1) {
+            textoExito = `📨 ${enviadas} invitaciones enviadas`;
+          }
+          toast.success(textoExito, { id: 'send-invites' });
+        }
+
+        if (rechazadas > 0) {
+          let textoError = `${rechazadas} invitación no válida no se pudo enviar`;
+          if (rechazadas > 1) {
+            textoError = `${rechazadas} invitaciones no válidas no se pudieron enviar`;
+          }
+          toast.error(textoError);
+        }
+
+        setMostrarModalInvitacion(false);
+        setAmigosSeleccionados([]);
+      },
+      (errorInvitaciones) => {
+        console.error('Error enviando invitaciones:', errorInvitaciones);
+        toast.error(errorInvitaciones?.response?.data?.error || 'No se pudieron enviar las invitaciones');
+      }
+    );
   };
 
   if (!mesa) {
@@ -554,14 +636,108 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     );
   }
 
+  // Si el hook ya trae jugadores del backend, usamos esa fuente como principal.
+  let jugadoresMesa = jugadores;
+  if (juegoPoker.players.length > 0) {
+    jugadoresMesa = juegoPoker.players;
+  }
+
+  const indiceUsuarioActual = jugadoresMesa.findIndex((jugador) => jugador?.userId === usuario?.id);
+  const esMiTurno = juegoPoker.currentPlayerTurn === juegoPoker.playerIndex;
+  // Solo mostramos botones cuando realmente te toca actuar.
+  const mostrarAccionesApuesta = !esEspectador && juegoPoker.gamePhase !== 'waiting' && esMiTurno;
+
+  let clasePopupGanador = 'winner-popup';
+  let iconoPopupGanador = '🏆';
+  let tituloPopupGanador = 'Ganador de la mano';
+  if (datosPopupGanador && datosPopupGanador.esTuVictoria) {
+    clasePopupGanador = 'winner-popup winner-popup--tuya';
+    iconoPopupGanador = '🥇';
+    tituloPopupGanador = '¡HAS GANADO!';
+  }
+
+  let textoNoLeidosChat = '';
+  if (contadorNoLeidosChat > 0) {
+    textoNoLeidosChat = `(${contadorNoLeidosChat})`;
+  }
+
+  let claseBotonMenu = 'btn-menu';
+  let textoBotonMenu = '☰ Menú';
+  if (vistaCompacta) {
+    claseBotonMenu = 'btn-menu compact';
+    textoBotonMenu = '☰';
+  }
+
+  let botonEstadoJugador = (
+    <button
+      className="menu-item"
+      onClick={manejarLevantarse}
+    >
+      <span className="menu-icon">🪡</span>
+      Levantarse
+      <span className="menu-desc">Cambiar a modo espectador</span>
+    </button>
+  );
+  if (esEspectador) {
+    botonEstadoJugador = (
+      <button
+        className="menu-item"
+        onClick={manejarSentarse}
+      >
+        <span className="menu-icon">🪡</span>
+        Volver a sentarse
+        <span className="menu-desc">Reincorporarse a la mesa</span>
+      </button>
+    );
+  }
+
+  let clasePanelChat = 'table-chat-panel';
+  if (vistaCompacta) {
+    clasePanelChat = 'table-chat-panel compact';
+  }
+
+  let contenidoMensajesChat = (
+    <p className="table-chat-empty">No hay mensajes todavía. Sé el primero en escribir.</p>
+  );
+  if (mensajesChat.length > 0) {
+    contenidoMensajesChat = mensajesChat.map((mensaje) => {
+      const esMio = String(mensaje.userId) === String(usuario?.id);
+
+      let marcaTiempo = null;
+      if (mensaje && mensaje.createdAt) {
+        marcaTiempo = new Date(mensaje.createdAt);
+      }
+
+      let textoHora = '';
+      if (marcaTiempo && !Number.isNaN(marcaTiempo.getTime())) {
+        textoHora = marcaTiempo.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+
+      let claseMensaje = 'table-chat-message';
+      if (esMio) {
+        claseMensaje = 'table-chat-message mine';
+      }
+
+      return (
+        <article key={mensaje.id} className={claseMensaje}>
+          <div className="table-chat-message-top">
+            <span className="table-chat-user">{mensaje.avatar || '🎭'} {mensaje.username || 'Jugador'}</span>
+            <span className="table-chat-time">{textoHora}</span>
+          </div>
+          <p>{mensaje.message}</p>
+        </article>
+      );
+    });
+  }
+
   return (
     <div className="table-page">
       {/* Popup ganador centrado en pantalla */}
       {datosPopupGanador && (
-        <div className={`winner-popup ${datosPopupGanador.esTuVictoria ? 'winner-popup--tuya' : ''}`}>
-          <div className="winner-popup__icono">{datosPopupGanador.esTuVictoria ? '🥇' : '🏆'}</div>
+        <div className={clasePopupGanador}>
+          <div className="winner-popup__icono">{iconoPopupGanador}</div>
           <div className="winner-popup__titulo">
-            {datosPopupGanador.esTuVictoria ? '¡HAS GANADO!' : 'Ganador de la mano'}
+            {tituloPopupGanador}
           </div>
           <div className="winner-popup__nombre">{datosPopupGanador.winnerName}</div>
           <div className="winner-popup__bote">+{(datosPopupGanador.potWon || 0).toLocaleString()} PK</div>
@@ -593,15 +769,15 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
               className="btn-menu btn-chat"
               onClick={() => setChatAbierto((previo) => !previo)}
             >
-              🗣️ Chat {contadorNoLeidosChat > 0 ? `(${contadorNoLeidosChat})` : ''}
+              🗣️ Chat {textoNoLeidosChat}
             </button>
           )}
 
           <button 
-            className={`btn-menu${vistaCompacta ? ' compact' : ''}`}
+            className={claseBotonMenu}
             onClick={() => setMostrarMenu(!mostrarMenu)}
           >
-            {vistaCompacta ? '☰' : '☰ Menú'}
+            {textoBotonMenu}
           </button>
 
           {mostrarMenu && vistaCompacta && (
@@ -630,32 +806,14 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
                     }}
                   >
                     <span className="menu-icon">🗣️</span>
-                    Chat {contadorNoLeidosChat > 0 ? `(${contadorNoLeidosChat})` : ''}
+                    Chat {textoNoLeidosChat}
                     <span className="menu-desc">Abrir el chat</span>
                   </button>
                   <div className="menu-divider" />
                 </>
               )}
 
-              {!esEspectador ? (
-                <button 
-                  className="menu-item" 
-                  onClick={manejarLevantarse}
-                >
-                  <span className="menu-icon">🪡</span>
-                  Levantarse
-                  <span className="menu-desc">Cambiar a modo espectador</span>
-                </button>
-              ) : (
-                <button 
-                  className="menu-item" 
-                  onClick={manejarSentarse}
-                >
-                  <span className="menu-icon">🪡</span>
-                  Volver a sentarse
-                  <span className="menu-desc">Reincorporarse a la mesa</span>
-                </button>
-              )}
+              {botonEstadoJugador}
               
               <button 
                 className="menu-item" 
@@ -681,10 +839,6 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
 
       {/* Mesa de poker + acciones en overlay */}
       <div className="table-game-area">
-        {(() => {
-          const jugadoresMesa = juegoPoker.players.length > 0 ? juegoPoker.players : jugadores;
-          const indiceUsuarioActual = jugadoresMesa.findIndex((jugador) => jugador?.userId === usuario?.id);
-          return (
         <MesaPoker
           maxPlayers={mesa.maxPlayers}
           players={jugadoresMesa}
@@ -700,38 +854,27 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
           currentUserIndex={indiceUsuarioActual}
           currentPlayerIndex={juegoPoker.currentPlayerTurn}
         />
-          );
-        })()}
 
         {/* Acciones: solo visibles cuando es tu turno */}
-        {!esEspectador && juegoPoker.gamePhase !== 'waiting' && (() => {
-          const esMiTurno = juegoPoker.currentPlayerTurn === juegoPoker.playerIndex;
-          console.log('🎮 BettingActions:', {
-            currentPlayerTurn: juegoPoker.currentPlayerTurn,
-            playerIndex: juegoPoker.playerIndex,
-            isMyTurn: esMiTurno,
-            gamePhase: juegoPoker.gamePhase
-          });
-          return esMiTurno ? (
-            <AccionesApuesta
-              playerChips={juegoPoker.playerChips}
-              currentBet={juegoPoker.currentBet}
-              minRaise={juegoPoker.minRaise}
-              pot={juegoPoker.pot}
-              isPlayerTurn={esMiTurno}
-              canCheck={juegoPoker.canCheck}
-              canCall={juegoPoker.canCall}
-              canRaise={juegoPoker.canRaise}
-              canFold={juegoPoker.canFold}
-              turnTimeRemaining={juegoPoker.turnTimeRemaining}
-              onFold={juegoPoker.handleFold}
-              onCheck={juegoPoker.handleCheck}
-              onCall={juegoPoker.handleCall}
-              onRaise={juegoPoker.handleRaise}
-              onAllIn={juegoPoker.handleAllIn}
-            />
-          ) : null;
-        })()}
+        {mostrarAccionesApuesta && (
+          <AccionesApuesta
+            playerChips={juegoPoker.playerChips}
+            currentBet={juegoPoker.currentBet}
+            minRaise={juegoPoker.minRaise}
+            pot={juegoPoker.pot}
+            isPlayerTurn={esMiTurno}
+            canCheck={juegoPoker.canCheck}
+            canCall={juegoPoker.canCall}
+            canRaise={juegoPoker.canRaise}
+            canFold={juegoPoker.canFold}
+            turnTimeRemaining={juegoPoker.turnTimeRemaining}
+            onFold={juegoPoker.handleFold}
+            onCheck={juegoPoker.handleCheck}
+            onCall={juegoPoker.handleCall}
+            onRaise={juegoPoker.handleRaise}
+            onAllIn={juegoPoker.handleAllIn}
+          />
+        )}
       </div>
 
       {/* Panel de acciones */}
@@ -744,7 +887,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
       )}
 
       {chatAbierto && (
-        <section className={`table-chat-panel${vistaCompacta ? ' compact' : ''}`}>
+        <section className={clasePanelChat}>
           <header className="table-chat-header">
             <h3>Chat de partida</h3>
             <button
@@ -757,27 +900,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
           </header>
 
           <div className="table-chat-messages">
-            {mensajesChat.length === 0 ? (
-              <p className="table-chat-empty">No hay mensajes todavía. Sé el primero en escribir.</p>
-            ) : (
-              mensajesChat.map((mensaje) => {
-                const esMio = String(mensaje.userId) === String(usuario?.id);
-                const marcaTiempo = mensaje?.createdAt ? new Date(mensaje.createdAt) : null;
-                const textoHora = marcaTiempo && !Number.isNaN(marcaTiempo.getTime())
-                  ? marcaTiempo.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                  : '';
-
-                return (
-                  <article key={mensaje.id} className={`table-chat-message${esMio ? ' mine' : ''}`}>
-                    <div className="table-chat-message-top">
-                      <span className="table-chat-user">{mensaje.avatar || '🎭'} {mensaje.username || 'Jugador'}</span>
-                      <span className="table-chat-time">{textoHora}</span>
-                    </div>
-                    <p>{mensaje.message}</p>
-                  </article>
-                );
-              })
-            )}
+            {contenidoMensajesChat}
             <div ref={referenciaFinChat} />
           </div>
 
@@ -785,7 +908,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
             <input
               type="text"
               value={entradaChat}
-              onChange={(e) => setEntradaChat(e.target.value.slice(0, MAXIMO_CARACTERES_CHAT))}
+              onChange={(eventoEntrada) => setEntradaChat(eventoEntrada.target.value.slice(0, MAXIMO_CARACTERES_CHAT))}
               placeholder="Escribe un mensaje..."
               maxLength={MAXIMO_CARACTERES_CHAT}
             />
@@ -819,30 +942,46 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
                 {!cargandoAmigos && amigos.length === 0 && (
                   <p style={{ color: '#ddd' }}>No tienes amigos para invitar.</p>
                 )}
-                {amigos.map((amigo) => (
-                  <div 
-                    key={amigo.id}
-                    className={`friend-item ${
-                      !amigo.online ? 'offline' : ''
-                    } ${
-                      amigosSeleccionados.includes(amigo.id) ? 'selected' : ''
-                    }`}
-                    onClick={() => amigo.online && alternarSeleccionAmigo(amigo.id)}
-                  >
-                    <div className="friend-info">
-                      <span className="friend-avatar">{amigo.avatar}</span>
-                      <span className="friend-name">{amigo.username}</span>
-                      {amigo.online ? (
-                        <span className="status-badge online">🟢 Online</span>
-                      ) : (
-                        <span className="status-badge offline">⚪ Offline</span>
-                      )}
+                {amigos.map((amigo) => {
+                  let claseAmigo = 'friend-item';
+                  if (!amigo.online) {
+                    claseAmigo = 'friend-item offline';
+                  }
+                  if (amigosSeleccionados.includes(amigo.id)) {
+                    claseAmigo = `${claseAmigo} selected`;
+                  }
+
+                  const manejarClickAmigo = () => {
+                    if (amigo.online) {
+                      alternarSeleccionAmigo(amigo.id);
+                    }
+                  };
+
+                  let estadoAmigo = <span className="status-badge offline">⚪ Offline</span>;
+                  if (amigo.online) {
+                    estadoAmigo = <span className="status-badge online">🟢 Online</span>;
+                  }
+
+                  let iconoSeleccion = null;
+                  if (amigosSeleccionados.includes(amigo.id)) {
+                    iconoSeleccion = <span className="check-icon">✓</span>;
+                  }
+
+                  return (
+                    <div
+                      key={amigo.id}
+                      className={claseAmigo}
+                      onClick={manejarClickAmigo}
+                    >
+                      <div className="friend-info">
+                        <span className="friend-avatar">{amigo.avatar}</span>
+                        <span className="friend-name">{amigo.username}</span>
+                        {estadoAmigo}
+                      </div>
+                      {iconoSeleccion}
                     </div>
-                    {amigosSeleccionados.includes(amigo.id) && (
-                      <span className="check-icon">✓</span>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
             

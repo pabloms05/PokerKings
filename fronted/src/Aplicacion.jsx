@@ -24,36 +24,36 @@ function Aplicacion() {
     () => sessionStorage.getItem('nav_view') || 'inicio'
   )
   const [mesaActual, setMesaActual] = useState(() => {
-    try { return JSON.parse(sessionStorage.getItem('nav_table')) } catch { return null }
+    const textoMesaGuardada = sessionStorage.getItem('nav_table')
+    if (!textoMesaGuardada) {
+      return null
+    }
+    return JSON.parse(textoMesaGuardada)
   })
 
   // Cargar datos al iniciar
   useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        setCargando(true)
-        
-        // Verificar si hay usuario autenticado
-        const usuarioActual = authService.getCurrentUser()
-        if (usuarioActual) {
-          // Cargar datos frescos desde la BD para tener fichas correctas
-          try {
-            const response = await userAPI.getUserById(usuarioActual.id)
-            const usuarioFresco = { ...usuarioActual, ...response.data }
-            setUsuario(usuarioFresco)
-            sessionStorage.setItem('user', JSON.stringify(usuarioFresco))
-          } catch {
-            // Si falla la BD, usar sessionStorage pero sanear las fichas
-            setUsuario({ ...usuarioActual, chips: Number(usuarioActual.chips) || 0 })
-          }
-        } else {
-          // sin tablas
-        }
-      } catch (err) {
-        console.error('Error cargando datos:', err)
-      } finally {
+    const cargarDatos = () => {
+      setCargando(true)
+
+      const usuarioActual = authService.getCurrentUser()
+      if (!usuarioActual) {
         setCargando(false)
+        return
       }
+
+      userAPI.getUserById(usuarioActual.id).then(
+        (respuestaUsuario) => {
+          const usuarioFresco = { ...usuarioActual, ...respuestaUsuario.data }
+          setUsuario(usuarioFresco)
+          sessionStorage.setItem('user', JSON.stringify(usuarioFresco))
+        },
+        () => {
+          setUsuario({ ...usuarioActual, chips: Number(usuarioActual.chips) || 0 })
+        }
+      ).then(() => {
+        setCargando(false)
+      })
     }
 
     cargarDatos()
@@ -95,17 +95,19 @@ function Aplicacion() {
   }, []) // setters de useState son estables, no necesitan deps
 
   // Función para actualizar usuario
-  const manejarActualizarUsuario = async (usuarioActualizado) => {
+  const manejarActualizarUsuario = (usuarioActualizado) => {
     setUsuario(usuarioActualizado)
     sessionStorage.setItem('user', JSON.stringify(usuarioActualizado))
-    try {
-      await userAPI.updateProfile(usuarioActualizado.id, {
+
+    userAPI.updateProfile(usuarioActualizado.id, {
         avatar: usuarioActualizado.avatar,
         chips: usuarioActualizado.chips,
-      })
-    } catch (err) {
-      console.warn('No se pudo guardar perfil en backend:', err)
-    }
+      }).then(
+      () => {},
+      (errorDePerfil) => {
+        console.warn('No se pudo guardar perfil en backend:', errorDePerfil)
+      }
+    )
   }
 
   // Navegación entre vistas
@@ -120,7 +122,7 @@ function Aplicacion() {
 
   // Notificaciones de invitación a partida en tiempo real
   useEffect(() => {
-    if (!usuario?.id) return;
+    if (!usuario || !usuario.id) return;
 
     const token = authService.getToken();
     if (token) {
@@ -132,14 +134,14 @@ function Aplicacion() {
       const nombreInvitador = invitacion?.from?.username || 'Un amigo';
       const nombreMesa = invitacion?.table?.name || 'una mesa';
 
-      toast((t) => (
+      toast((instanciaToast) => (
         <div style={{ textAlign: 'left' }}>
           <div style={{ marginBottom: '0.6rem' }}>
             <strong>{nombreInvitador}</strong> te invitó a <strong>{nombreMesa}</strong>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
             <button
-              onClick={() => toast.dismiss(t.id)}
+              onClick={() => toast.dismiss(instanciaToast.id)}
               style={{
                 background: '#444',
                 color: 'white',
@@ -152,21 +154,25 @@ function Aplicacion() {
               Cerrar
             </button>
             <button
-              onClick={async () => {
-                toast.dismiss(t.id)
-                if (!invitacion?.table?.id) {
+              onClick={() => {
+                toast.dismiss(instanciaToast.id)
+                if (!invitacion || !invitacion.table || !invitacion.table.id) {
                   setVistaActual('mesas')
                   return
                 }
 
-                try {
-                  await manejarUnirseMesa(invitacion.table, invitacion.invitationToken)
-                  if (invitacionGuardada?.id) {
-                    removeGameInvitation(invitacionGuardada.id)
+                manejarUnirseMesa(invitacion.table, invitacion.invitationToken).then(
+                  () => {
+                    if (invitacionGuardada && invitacionGuardada.id) {
+                      removeGameInvitation(invitacionGuardada.id)
+                    }
+                  },
+                  () => {
+                    setVistaActual('mesas')
                   }
-                } catch {
+                ).then(() => {
                   setVistaActual('mesas')
-                }
+                })
               }}
               style={{
                 background: '#0b6623',
@@ -193,7 +199,7 @@ function Aplicacion() {
   useEffect(() => {
     const onNavigateToInvitationTable = (event) => {
       const mesa = event?.detail?.table
-      if (!mesa?.id) return
+      if (!mesa || !mesa.id) return
 
       sessionStorage.setItem('nav_table', JSON.stringify(mesa))
       sessionStorage.setItem('nav_view', 'partida')
@@ -206,64 +212,62 @@ function Aplicacion() {
   }, [])
 
   // Unirse a mesa
-  const manejarUnirseMesa = async (mesa, tokenInvitacion = null) => {
-    try {
-      console.log('Unirse a mesa:', mesa)
-      const response = await tableAPI.joinTable(mesa.id, tokenInvitacion)
-      const mesaResuelta = response.data?.table || mesa
-
-      // Solo entrar a mesa cuando el backend confirma join
-      sessionStorage.setItem('nav_table', JSON.stringify(mesaResuelta))
-      sessionStorage.setItem('nav_view', 'partida')
-      setMesaActual(mesaResuelta)
-      setVistaActual('partida')
-    } catch (err) {
-      console.error('Error uniéndose a mesa:', err)
-      toast.error(err?.response?.data?.message || 'No se pudo unir a la mesa')
-    }
+  const manejarUnirseMesa = (mesa, tokenInvitacion = null) => {
+    console.log('Unirse a mesa:', mesa)
+    return tableAPI.joinTable(mesa.id, tokenInvitacion).then(
+      (respuestaJoin) => {
+        const mesaResuelta = respuestaJoin.data?.table || mesa
+        sessionStorage.setItem('nav_table', JSON.stringify(mesaResuelta))
+        sessionStorage.setItem('nav_view', 'partida')
+        setMesaActual(mesaResuelta)
+        setVistaActual('partida')
+      },
+      (errorJoin) => {
+        console.error('Error uniéndose a mesa:', errorJoin)
+        toast.error(errorJoin?.response?.data?.message || 'No se pudo unir a la mesa')
+        return Promise.reject(errorJoin)
+      }
+    )
   }
 
   // Crear mesa
-  const manejarCrearMesa = async (datosFormulario) => {
-    try {
-      console.log('Creando mesa:', datosFormulario)
-      const validacionNombre = validateTableName(datosFormulario.tableName)
-      if (!validacionNombre.isValid) {
-        toast.error(validacionNombre.message)
-        return
-      }
-      
-      // Llamar al backend para crear la mesa
-      const datosMesa = {
-        name: datosFormulario.tableName,
-        smallBlind: datosFormulario.smallBlind,
-        bigBlind: datosFormulario.bigBlind,
-        maxPlayers: datosFormulario.maxPlayers,
-        isPrivate: datosFormulario.isPrivate,
-        botsCount: datosFormulario.bots
-      }
-      
-      try {
-        const response = await tableAPI.createTable(datosMesa)
-        
-        // Establecer la mesa creada como mesa actual
+  const manejarCrearMesa = (datosFormulario) => {
+    console.log('Creando mesa:', datosFormulario)
+    const validacionNombre = validateTableName(datosFormulario.tableName)
+    if (!validacionNombre.isValid) {
+      toast.error(validacionNombre.message)
+      return
+    }
+
+    const datosMesa = {
+      name: datosFormulario.tableName,
+      smallBlind: datosFormulario.smallBlind,
+      bigBlind: datosFormulario.bigBlind,
+      maxPlayers: datosFormulario.maxPlayers,
+      isPrivate: datosFormulario.isPrivate,
+      botsCount: datosFormulario.bots
+    }
+
+    tableAPI.createTable(datosMesa).then(
+      (respuestaCreacion) => {
         const mesaCreada = {
-          ...response.data,
-          players: [usuario], // El creador es el primer jugador
+          ...respuestaCreacion.data,
+          players: [usuario],
           botsCount: datosFormulario.bots
         }
+
         sessionStorage.setItem('nav_table', JSON.stringify(mesaCreada))
         sessionStorage.setItem('nav_view', 'partida')
         setMesaActual(mesaCreada)
-        
         setVistaActual('partida')
-        
-      } catch (apiError) {
-        if (apiError?.response) {
-          throw apiError
+      },
+      (errorCreacion) => {
+        if (errorCreacion && errorCreacion.response) {
+          console.error('Error creando mesa:', errorCreacion)
+          toast.error(errorCreacion?.response?.data?.message || 'No se pudo crear la mesa')
+          return
         }
 
-        // Si backend no está disponible, crear mesa localmente
         console.warn('Backend no disponible, creando mesa localmente')
         const mesaLocal = {
           id: Date.now(),
@@ -276,10 +280,7 @@ function Aplicacion() {
         setMesaActual(mesaLocal)
         setVistaActual('partida')
       }
-    } catch (err) {
-      console.error('Error creando mesa:', err)
-      toast.error(err?.response?.data?.message || 'No se pudo crear la mesa')
-    }
+    )
   }
 
   if (cargando) {
@@ -292,19 +293,25 @@ function Aplicacion() {
 
   // Si no hay usuario, mostrar inicio de sesión o registro
   if (!usuario) {
+    let contenidoAcceso = (
+      <InicioSesion
+        alIniciarSesionExito={manejarInicioSesionExitoso}
+        alCambiarARegistro={() => setMostrarRegistro(true)}
+      />
+    )
+
+    if (mostrarRegistro) {
+      contenidoAcceso = (
+        <Registro
+          alRegistroExitoso={manejarRegistroExitoso}
+          alCambiarALogin={() => setMostrarRegistro(false)}
+        />
+      )
+    }
+
     return (
       <div className="App">
-        {mostrarRegistro ? (
-          <Registro
-            alRegistroExitoso={manejarRegistroExitoso}
-            alCambiarALogin={() => setMostrarRegistro(false)}
-          />
-        ) : (
-          <InicioSesion
-            alIniciarSesionExito={manejarInicioSesionExitoso}
-            alCambiarARegistro={() => setMostrarRegistro(true)}
-          />
-        )}
+        {contenidoAcceso}
       </div>
     )
   }

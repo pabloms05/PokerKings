@@ -16,6 +16,11 @@ const OPCIONES_AVATAR = [
 function SelectorAvatar({ avatarSeleccionado, alSeleccionarAvatar }) {
   const [estaAbierto, setEstaAbierto] = useState(false);
 
+  let emojiAvatarSeleccionado = '👤';
+  if (avatarSeleccionado) {
+    emojiAvatarSeleccionado = avatarSeleccionado;
+  }
+
   const manejarSeleccionAvatar = (avatar) => {
     alSeleccionarAvatar(avatar);
     setEstaAbierto(false);
@@ -29,7 +34,7 @@ function SelectorAvatar({ avatarSeleccionado, alSeleccionarAvatar }) {
       
       <div className="avatar-display" onClick={() => setEstaAbierto(!estaAbierto)}>
         <div className="selected-avatar">
-          <span className="avatar-emoji">{avatarSeleccionado || '👤'}</span>
+          <span className="avatar-emoji">{emojiAvatarSeleccionado}</span>
         </div>
         <span className="avatar-label">Haz clic para cambiar</span>
       </div>
@@ -47,16 +52,23 @@ function SelectorAvatar({ avatarSeleccionado, alSeleccionarAvatar }) {
             </button>
           </div>
           <div className="avatar-grid">
-            {OPCIONES_AVATAR.map((avatar, indice) => (
-              <button
-                key={indice}
-                type="button"
-                className={`avatar-option ${avatarSeleccionado === avatar ? 'selected' : ''}`}
-                onClick={() => manejarSeleccionAvatar(avatar)}
-              >
-                {avatar}
-              </button>
-            ))}
+            {OPCIONES_AVATAR.map((avatarOpcion, indiceOpcion) => {
+              let claseOpcion = 'avatar-option';
+              if (avatarSeleccionado === avatarOpcion) {
+                claseOpcion = 'avatar-option selected';
+              }
+
+              return (
+                <button
+                  key={indiceOpcion}
+                  type="button"
+                  className={claseOpcion}
+                  onClick={() => manejarSeleccionAvatar(avatarOpcion)}
+                >
+                  {avatarOpcion}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

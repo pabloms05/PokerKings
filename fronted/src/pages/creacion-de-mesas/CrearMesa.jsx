@@ -13,11 +13,40 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
 
   const manejarCambio = (evento) => {
     const { name, value } = evento.target;
+
+    let valorProcesado = value;
+    if (name !== 'nombreMesa') {
+      valorProcesado = parseInt(value, 10);
+    }
+
     setDatosFormulario((previo) => ({
       ...previo,
-      [name]: name === 'nombreMesa' ? value : parseInt(value, 10)
+      [name]: valorProcesado
     }));
   };
+
+  const obtenerClaseBotonOpcion = (esActivo) => {
+    let clase = 'btn-option';
+    if (esActivo) {
+      clase = 'btn-option active';
+    }
+    return clase;
+  };
+
+  let iconoTipoMesa = '🔓';
+  let textoTipoMesa = 'Pública';
+  let textoAyudaTipo = 'Cualquiera puede unirse desde el lobby';
+
+  if (datosFormulario.esPrivada) {
+    iconoTipoMesa = '🔒';
+    textoTipoMesa = 'Privada';
+    textoAyudaTipo = 'Solo jugadores invitados pueden unirse';
+  }
+
+  let sufijoBots = 's';
+  if (datosFormulario.bots === 1) {
+    sufijoBots = '';
+  }
 
   const manejarEnvio = (evento) => {
     evento.preventDefault();
@@ -40,7 +69,7 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
           ← Volver
         </button>
 
-        <h1 className="create-title">{datosFormulario.esPrivada ? '🔒' : '🔓'} Crear Mesa {datosFormulario.esPrivada ? 'Privada' : 'Pública'}</h1>
+        <h1 className="create-title">{iconoTipoMesa} Crear Mesa {textoTipoMesa}</h1>
         <p className="create-subtitle">Configura tu mesa personalizada</p>
 
         <form onSubmit={manejarEnvio} className="create-form">
@@ -71,7 +100,7 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
                 <button
                   key={num}
                   type="button"
-                  className={`btn-option ${datosFormulario.maximoJugadores === num ? 'active' : ''}`}
+                  className={obtenerClaseBotonOpcion(datosFormulario.maximoJugadores === num)}
                   onClick={() => setDatosFormulario((previo) => ({ ...previo, maximoJugadores: num }))}
                 >
                   {num} jugadores
@@ -88,23 +117,21 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
             <div className="button-group">
               <button
                 type="button"
-                className={`btn-option ${!datosFormulario.esPrivada ? 'active' : ''}`}
+                className={obtenerClaseBotonOpcion(!datosFormulario.esPrivada)}
                 onClick={() => setDatosFormulario((previo) => ({ ...previo, esPrivada: false }))}
               >
                 🔓 Pública
               </button>
               <button
                 type="button"
-                className={`btn-option ${datosFormulario.esPrivada ? 'active' : ''}`}
+                className={obtenerClaseBotonOpcion(datosFormulario.esPrivada)}
                 onClick={() => setDatosFormulario((previo) => ({ ...previo, esPrivada: true }))}
               >
                 🔒 Privada
               </button>
             </div>
             <p className="form-hint">
-              {datosFormulario.esPrivada
-                ? 'Solo jugadores invitados pueden unirse' 
-                : 'Cualquiera puede unirse desde el lobby'}
+              {textoAyudaTipo}
             </p>
           </div>
 
@@ -124,7 +151,7 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
                 className="form-slider"
               />
               <div className="slider-value">
-                {datosFormulario.bots} bot{datosFormulario.bots !== 1 ? 's' : ''}
+                {datosFormulario.bots} bot{sufijoBots}
               </div>
             </div>
             <p className="form-hint">
@@ -180,7 +207,7 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
             </div>
             <div className="summary-item">
               <span>Tipo:</span>
-              <strong>{datosFormulario.esPrivada ? '🔒 Privada' : '🔓 Pública'}</strong>
+              <strong>{iconoTipoMesa} {textoTipoMesa}</strong>
             </div>
             <div className="summary-item">
               <span>Jugadores:</span>

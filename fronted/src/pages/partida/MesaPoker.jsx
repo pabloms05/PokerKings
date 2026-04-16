@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './MesaPoker.css';
 
 // Tamaño base del diseño (en px). Todo el layout está pensado para este ancho.
@@ -27,23 +27,31 @@ function PokerTable({
   const referenciaWrapper = useRef(null);
   const [escala, setEscala] = useState(1);
 
-  const actualizarEscala = useCallback(() => {
-    if (!referenciaWrapper.current) return;
-    const anchoDisponible = referenciaWrapper.current.offsetWidth;
-    const nuevaEscala = Math.min(anchoDisponible / BASE_WIDTH, 1);
-    setEscala(nuevaEscala);
-  }, []);
-
   useEffect(() => {
+    const actualizarEscala = () => {
+      if (!referenciaWrapper.current) return;
+      const anchoDisponible = referenciaWrapper.current.offsetWidth;
+      const nuevaEscala = Math.min(anchoDisponible / BASE_WIDTH, 1);
+      setEscala(nuevaEscala);
+    };
+
     actualizarEscala();
     const observador = new ResizeObserver(actualizarEscala);
     if (referenciaWrapper.current) observador.observe(referenciaWrapper.current);
     return () => observador.disconnect();
-  }, [actualizarEscala]);
+  }, []);
+
+  // Preferimos currentUserIndex cuando llega del padre; si no, lo buscamos por id.
+  const indiceUsuarioActualCalculado = currentUserIndex !== null && currentUserIndex !== undefined
+    ? currentUserIndex
+    : players.findIndex((jugador) => {
+      const idJugador = jugador?.userId ?? jugador?.id ?? jugador?.username;
+      return String(idJugador) === String(currentPlayerId);
+    });
   
-  // FIX: useRef para evitar re-renders innecesarios de animaciones
-  const referenciaFaseAnterior = useRef(faseJuego);
-  const referenciaCantidadCartasAnterior = useRef(cartasComunitarias.length);
+  // Guardar datos de la ronda anterior para animar solo cuando hay cambios reales.
+  const referenciaFaseAnterior = useRef(gamePhase);
+  const referenciaCantidadCartasAnterior = useRef(communityCards.length);
   
   // Obtener ruta de imagen de carta (e.g., "AS" → "/assets/images/AS.png")
   const obtenerImagenCarta = (carta) => {
@@ -66,19 +74,130 @@ function PokerTable({
     return `/assets/images/${rango}${palo}.png`;
   };
 
+  const obtenerAvatarVisible = (jugador) => {
+    if (!jugador || !jugador.avatar) return '👤';
+
+    if (
+      jugador.avatar.includes('.png') ||
+      jugador.avatar.includes('.jpg') ||
+      jugador.avatar.includes('default-avatar')
+    ) {
+      if (jugador.username && jugador.username.toLowerCase().includes('bot')) {
+        return '🤖';
+      }
+      return '👤';
+    }
+
+    return jugador.avatar;
+  };
+
+  const obtenerClasePuntoFase = (fasePunto) => {
+    let clase = 'phase-dot';
+    if (fasePunto === 'preflop') {
+      if (gamePhase === 'pre-flop' || gamePhase === 'preflop') {
+        clase = 'phase-dot active';
+      }
+      return clase;
+    }
+
+    if (gamePhase === fasePunto) {
+      clase = 'phase-dot active';
+    }
+
+    return clase;
+  };
+
+  const renderizarCartasDelJugador = (jugador, esJugadorActual) => {
+    if (esJugadorActual && jugador.holeCards && jugador.holeCards.length > 0) {
+      return jugador.holeCards.map((carta, indiceCarta) => {
+        const imagenCarta = obtenerImagenCarta(carta);
+
+        let contenidoCarta = <div className="card-placeholder">?</div>;
+        if (imagenCarta) {
+          contenidoCarta = <img src={imagenCarta} alt={carta} />;
+        }
+
+        return (
+          <div key={indiceCarta} className="player-card-revealed">
+            {contenidoCarta}
+          </div>
+        );
+      });
+    }
+
+    return (
+      <>
+        <div className="player-card">🂠</div>
+        <div className="player-card">🂠</div>
+      </>
+    );
+  };
+
+  const renderizarContenidoAsiento = (jugador, indiceOriginal, esJugadorActual, indiceAsiento) => {
+    if (!jugador) {
+      return (
+        <div className="empty-seat">
+          <div className="empty-seat-icon">+</div>
+          <div className="empty-seat-text">Asiento {indiceAsiento + 1}</div>
+        </div>
+      );
+    }
+
+    let badgeDealer = null;
+    if (dealerPosition === indiceOriginal) {
+      badgeDealer = <div className="position-badge dealer-badge">D</div>;
+    }
+
+    let badgeSmallBlind = null;
+    if (smallBlindPosition === indiceOriginal) {
+      badgeSmallBlind = <div className="position-badge sb-badge">SB</div>;
+    }
+
+    let badgeBigBlind = null;
+    if (bigBlindPosition === indiceOriginal) {
+      badgeBigBlind = <div className="position-badge bb-badge">BB</div>;
+    }
+
+    return (
+      <>
+        <div className="player-cards">
+          {renderizarCartasDelJugador(jugador, esJugadorActual)}
+        </div>
+
+        <div className="player-info">
+          {badgeDealer}
+          {badgeSmallBlind}
+          {badgeBigBlind}
+
+          <div className="player-header">
+            <div className="player-avatar">
+              {obtenerAvatarVisible(jugador)}
+            </div>
+            <div className="player-level">🎖️ Nv {jugador.level || 1}</div>
+          </div>
+          <div className="player-name">{jugador.username}</div>
+          <div className="player-balance">
+            <span className="pk-coin">🪙</span>
+            <span className="balance-amount">{(jugador.chips || 0).toLocaleString()} PK</span>
+          </div>
+        </div>
+      </>
+    );
+  };
+
   // Determinar qué cartas mostrar según fase del juego
   const obtenerCartasVisibles = () => {
-    switch (faseJuego) {
+    switch (gamePhase) {
       case 'pre-flop':
       case 'preflop':
         return [];
       case 'flop':
-        return cartasComunitarias.slice(0, 3);
+        return communityCards.slice(0, 3);
       case 'turn':
-        return cartasComunitarias.slice(0, 4);
+        return communityCards.slice(0, 4);
       case 'river':
       case 'showdown':
-        return cartasComunitarias.slice(0, 5);
+        return communityCards.slice(0, 5);
       default:
         return [];
     }
@@ -89,15 +208,14 @@ function PokerTable({
 
   // Efecto para revelar cartas nuevas con delay
   useEffect(() => {
-    // FIX: Solo ejecutar si realmente cambió la fase o el número de cartas
-    const cambioFase = referenciaFaseAnterior.current !== faseJuego;
-    const cambioCartas = referenciaCantidadCartasAnterior.current !== cartasComunitarias.length;
+    const cambioFase = referenciaFaseAnterior.current !== gamePhase;
+    const cambioCartas = referenciaCantidadCartasAnterior.current !== communityCards.length;
     
     // Resetear cuando cambia la fase a waiting (nueva mano)
-    if (faseJuego === 'waiting') {
+    if (gamePhase === 'waiting') {
       setCartasReveladas([]);
-      referenciaFaseAnterior.current = faseJuego;
-      referenciaCantidadCartasAnterior.current = cartasComunitarias.length;
+      referenciaFaseAnterior.current = gamePhase;
+      referenciaCantidadCartasAnterior.current = communityCards.length;
       return;
     }
 
@@ -122,9 +240,9 @@ function PokerTable({
     });
     
     // Actualizar referencias
-    referenciaFaseAnterior.current = faseJuego;
-    referenciaCantidadCartasAnterior.current = cartasComunitarias.length;
-  }, [faseJuego, cartasComunitarias.length, cartasReveladas]);
+    referenciaFaseAnterior.current = gamePhase;
+    referenciaCantidadCartasAnterior.current = communityCards.length;
+  }, [gamePhase, communityCards.length, cartasReveladas]);
   
   // Posiciones de los asientos alrededor de la mesa según el número máximo
   const posicionesAsientos = {
@@ -154,36 +272,49 @@ function PokerTable({
     ]
   };
 
-  const posiciones = posicionesAsientos[maxJugadores] || posicionesAsientos[6];
+  const posiciones = posicionesAsientos[maxPlayers] || posicionesAsientos[6];
 
-  // Reordenar jugadores para que el usuario actual siempre esté en la posición inferior (center-bottom)
-  const indiceCentroInferior = maxJugadores === 6 ? 3 : (maxJugadores === 4 ? 2 : maxJugadores - 1);
-  let jugadoresMostrados = [];
-  let mapaIndicesJugadores = {};
+  // Reordenar jugadores para que el usuario actual quede en el asiento inferior.
+  let indiceCentroInferior = maxPlayers - 1;
+  if (maxPlayers === 6) {
+    indiceCentroInferior = 3;
+  } else if (maxPlayers === 4) {
+    indiceCentroInferior = 2;
+  }
+  const jugadoresMostrados = Array.from({ length: maxPlayers }, () => null);
+  const mapaIndicesJugadores = {};
 
-  // Construir array de posiciones con rotación para poner al usuario en la posición inferior
-  if (indiceUsuarioActual !== null && indiceUsuarioActual !== undefined && jugadores.length > 0 && indiceUsuarioActual >= 0) {
-    // Calcular offset: cuántas posiciones rotar hacia la derecha para que el usuario esté en centerBottomIndex
-    const desplazamiento = (indiceCentroInferior - indiceUsuarioActual + jugadores.length) % jugadores.length;
-    
-    // Llenar el array de posiciones con jugadores rotados
-    for (let i = 0; i < maxJugadores; i++) {
-      if (i < jugadores.length) {
-        // Calcular el índice original del jugador que debería estar en esta posición
-        const originalIndex = (currentUserIndex + i - offset + players.length) % players.length;
-        const originalPlayer = players[originalIndex];
-        displayedPlayers[i] = originalPlayer?.isSittingOut ? null : originalPlayer;
-        playerIndexMap[i] = originalIndex;
+  if (indiceUsuarioActualCalculado !== null && indiceUsuarioActualCalculado !== undefined && players.length > 0 && indiceUsuarioActualCalculado >= 0) {
+    // Rotación circular: mueve asientos para que tu jugador quede siempre abajo.
+    const desplazamiento = (indiceCentroInferior - indiceUsuarioActualCalculado + players.length) % players.length;
+
+    for (let i = 0; i < maxPlayers; i++) {
+      if (i < players.length) {
+        const indiceOriginal = (i - desplazamiento + players.length) % players.length;
+        const jugadorOriginal = players[indiceOriginal];
+        if (jugadorOriginal && jugadorOriginal.isSittingOut) {
+          jugadoresMostrados[i] = null;
+        } else {
+          jugadoresMostrados[i] = jugadorOriginal;
+        }
+        mapaIndicesJugadores[i] = indiceOriginal;
       } else {
-        jugadoresMostrados[i] = null;
         mapaIndicesJugadores[i] = null;
       }
     }
   } else {
-    // Si no hay usuario actual, mostrar jugadores en orden
-    jugadoresMostrados = jugadores.map((jugador) => (jugador?.isSittingOut ? null : jugador));
-    for (let i = 0; i < maxJugadores; i++) {
-      mapaIndicesJugadores[i] = i < jugadores.length ? i : null;
+    // Si no sabemos quién es el usuario actual, mostramos jugadores en orden natural.
+    for (let i = 0; i < maxPlayers; i++) {
+      if (i < players.length) {
+        if (players[i] && players[i].isSittingOut) {
+          jugadoresMostrados[i] = null;
+        } else {
+          jugadoresMostrados[i] = players[i];
+        }
+        mapaIndicesJugadores[i] = i;
+      } else {
+        mapaIndicesJugadores[i] = null;
+      }
     }
   }
 
@@ -191,7 +322,10 @@ function PokerTable({
     <div
       ref={referenciaWrapper}
       className="poker-table-wrapper"
-      style={{ height: `${BASE_HEIGHT * escala}px` }}
+      style={{
+        height: `${BASE_HEIGHT * escala}px`,
+        '--table-color': tableColor
+      }}
     >
       <div
         className="poker-table-container"
@@ -219,24 +353,33 @@ function PokerTable({
             {cartasVisibles.map((carta, indice) => {
               const imagenCarta = obtenerImagenCarta(carta);
               const estaRevelada = cartasReveladas.includes(carta);
+
+              let claseCartaComunitaria = `community-card-table card-${indice}`;
+              if (estaRevelada) {
+                claseCartaComunitaria = `community-card-table revealed card-${indice}`;
+              }
+
+              let contenidoFrenteCarta = <div className="card-placeholder-table">?</div>;
+              if (imagenCarta) {
+                contenidoFrenteCarta = (
+                  <img
+                    src={imagenCarta}
+                    alt={carta}
+                    className="card-image"
+                  />
+                );
+              }
+
               return (
                 <div 
                   key={carta}
-                  className={`community-card-table ${estaRevelada ? 'revealed' : ''} card-${indice}`}
+                  className={claseCartaComunitaria}
                   style={{ transitionDelay: `${indice * 0.4}s` }}
                 >
                   <div className="card-inner-table">
                     <div className="card-back-table">🂠</div>
                     <div className="card-front-table">
-                      {imagenCarta ? (
-                        <img 
-                          src={imagenCarta}
-                          alt={carta}
-                          className="card-image"
-                        />
-                      ) : (
-                        <div className="card-placeholder-table">?</div>
-                      )}
+                      {contenidoFrenteCarta}
                     </div>
                   </div>
                 </div>
@@ -244,14 +387,14 @@ function PokerTable({
             })}
 
             {/* Slots vacíos */}
-            {faseJuego !== 'waiting' && Array.from({ length: espaciosVacios }).map((_, indice) => (
+            {gamePhase !== 'waiting' && Array.from({ length: espaciosVacios }).map((_, indice) => (
               <div key={`empty-${indice}`} className="community-card-table empty">
                 <div className="card-back-table">🂠</div>
               </div>
             ))}
 
             {/* Estado de espera */}
-            {faseJuego === 'waiting' && Array.from({ length: 5 }).map((_, indice) => (
+            {gamePhase === 'waiting' && Array.from({ length: 5 }).map((_, indice) => (
               <div key={`waiting-${indice}`} className="community-card-table waiting">
                 <div className="card-placeholder-table">?</div>
               </div>
@@ -261,10 +404,10 @@ function PokerTable({
 
         {/* Pot (bote central) debajo de las cartas */}
         <div className="pot-container">
-          <div className="pot-amount">💰 {bote.toLocaleString()} PK</div>
-          {botesLaterales && botesLaterales.length > 0 && (
+          <div className="pot-amount">💰 {pot.toLocaleString()} PK</div>
+          {sidePots && sidePots.length > 0 && (
             <div className="side-pots-mini">
-              {botesLaterales.map((boteLateral, indice) => (
+              {sidePots.map((boteLateral, indice) => (
                 <div key={indice} className="side-pot-mini">
                   +{boteLateral.amount.toLocaleString()} PK
                 </div>
@@ -275,102 +418,42 @@ function PokerTable({
 
         {/* Indicador de fase */}
         <div className="phase-indicator">
-          <div className={`phase-dot ${(faseJuego === 'pre-flop' || faseJuego === 'preflop') ? 'active' : ''}`}></div>
-          <div className={`phase-dot ${faseJuego === 'flop' ? 'active' : ''}`}></div>
-          <div className={`phase-dot ${faseJuego === 'turn' ? 'active' : ''}`}></div>
-          <div className={`phase-dot ${faseJuego === 'river' ? 'active' : ''}`}></div>
-          <div className={`phase-dot ${faseJuego === 'showdown' ? 'active' : ''}`}></div>
+          <div className={obtenerClasePuntoFase('preflop')}></div>
+          <div className={obtenerClasePuntoFase('flop')}></div>
+          <div className={obtenerClasePuntoFase('turn')}></div>
+          <div className={obtenerClasePuntoFase('river')}></div>
+          <div className={obtenerClasePuntoFase('showdown')}></div>
         </div>
       </div>
 
       {/* Asientos de jugadores */}
-      {Array.from({ length: maxJugadores }).map((_, indiceAsiento) => {
+      {Array.from({ length: maxPlayers }).map((_, indiceAsiento) => {
         const jugador = jugadoresMostrados[indiceAsiento];
         const posicion = posiciones[indiceAsiento];
         
         // Obtener el índice original del jugador para las posiciones de dealer/blind
-        const indiceOriginal = mapaIndicesJugadores[indiceAsiento] !== undefined ? mapaIndicesJugadores[indiceAsiento] : indiceAsiento;
-        const esJugadorActual = indiceOriginal === indiceUsuarioActual;
+        let indiceOriginal = indiceAsiento;
+        if (mapaIndicesJugadores[indiceAsiento] !== undefined) {
+          indiceOriginal = mapaIndicesJugadores[indiceAsiento];
+        }
+
+        const esJugadorActual = indiceOriginal === indiceUsuarioActualCalculado;
+
+        let claseAsiento = 'player-seat empty';
+        if (jugador) {
+          claseAsiento = 'player-seat occupied';
+        }
+        if (indiceOriginal === currentPlayerIndex) {
+          claseAsiento = `${claseAsiento} current-turn`;
+        }
 
         return (
           <div 
             key={indiceAsiento}
-            className={`player-seat ${jugador ? 'occupied' : 'empty'} ${indiceOriginal === indiceTurnoActual ? 'current-turn' : ''}`}
+            className={claseAsiento}
             style={posicion}
           >
-            {jugador ? (
-              <>
-                {/* Cartas del jugador - ARRIBA del player-info */}
-                <div className="player-cards">
-                  {esJugadorActual && jugador.holeCards && jugador.holeCards.length > 0 ? (
-                    // Mostrar cartas reveladas solo para el jugador actual
-                    jugador.holeCards.map((carta, indiceCarta) => {
-                      const imagenCarta = obtenerImagenCarta(carta);
-                      return (
-                        <div key={indiceCarta} className="player-card-revealed">
-                          {imagenCarta ? (
-                            <img src={imagenCarta} alt={carta} />
-                          ) : (
-                            <div className="card-placeholder">?</div>
-                          )}
-                        </div>
-                      );
-                    })
-                  ) : esJugadorActual ? (
-                    // Jugador actual sin cartas asignadas (esperando)
-                    <>
-                      <div className="player-card">🂠</div>
-                      <div className="player-card">🂠</div>
-                    </>
-                  ) : (
-                    // Mostrar cartas ocultas para otros jugadores
-                    <>
-                      <div className="player-card">🂠</div>
-                      <div className="player-card">🂠</div>
-                    </>
-                  )}
-                </div>
-
-                {/* Info del jugador - DEBAJO de las cartas */}
-                <div className="player-info">
-                  {/* Position Indicators */}
-                  {posicionDealer === indiceOriginal && (
-                    <div className="position-badge dealer-badge">D</div>
-                  )}
-                  {posicionCiegaPequena === indiceOriginal && (
-                    <div className="position-badge sb-badge">SB</div>
-                  )}
-                  {posicionCiegaGrande === indiceOriginal && (
-                    <div className="position-badge bb-badge">BB</div>
-                  )}
-                  
-                  <div className="player-header">
-                    <div className="player-avatar">
-                      {(() => {
-                        // Si no hay avatar o es una ruta de imagen
-                        if (!jugador.avatar || jugador.avatar.includes('.png') || jugador.avatar.includes('.jpg') || jugador.avatar.includes('default-avatar')) {
-                          // Si es bot, usar emoji de robot, sino cara genérica
-                          return jugador.username && jugador.username.toLowerCase().includes('bot') ? '🤖' : '👤';
-                        }
-                        // Usar el emoji del avatar
-                        return jugador.avatar;
-                      })()}
-                    </div>
-                    <div className="player-level">🎖️ Nv {jugador.level || 1}</div>
-                  </div>
-                  <div className="player-name">{jugador.username}</div>
-                  <div className="player-balance">
-                    <span className="pk-coin">🪙</span>
-                    <span className="balance-amount">{(jugador.chips || 0).toLocaleString()} PK</span>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="empty-seat">
-                <div className="empty-seat-icon">+</div>
-                <div className="empty-seat-text">Asiento {indiceAsiento + 1}</div>
-              </div>
-            )}
+            {renderizarContenidoAsiento(jugador, indiceOriginal, esJugadorActual, indiceAsiento)}
           </div>
         );
       })}

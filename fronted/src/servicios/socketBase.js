@@ -7,7 +7,7 @@ const resolveSocketUrl = () => {
   }
 
   // In production behind reverse proxy, always use same-origin socket endpoint.
-  if (typeof window !== 'undefined' && window.location?.origin) {
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
     return window.location.origin;
   }
 

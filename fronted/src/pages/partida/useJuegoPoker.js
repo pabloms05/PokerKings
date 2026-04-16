@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { gameSocket } from '../../servicios/socketJuego';
 import { gameAPI } from '../../servicios/api';
 
@@ -17,6 +17,15 @@ const normalizarSubidaMinima = (subidaMinimaEntrante, apuestaActualEntrante) => 
   }
 
   return 1;
+};
+
+const obtenerUsuarioSesion = () => {
+  const textoUsuario = sessionStorage.getItem('user');
+  if (!textoUsuario) {
+    return {};
+  }
+
+  return JSON.parse(textoUsuario);
 };
 
 /**
@@ -53,10 +62,14 @@ const useJuegoPoker = (usuario) => {
 
   // Actualizar avatar del jugador actual inmediatamente cuando cambia en el perfil
   useEffect(() => {
-    if (!usuario?.id || !usuario?.avatar) return;
-    setJugadores((previo) => previo.map((jugador) =>
-      jugador.userId === usuario.id ? { ...jugador, avatar: usuario.avatar } : jugador
-    ));
+    if (!usuario || !usuario.id || !usuario.avatar) return;
+    setJugadores((jugadoresPrevios) => jugadoresPrevios.map((jugador) => {
+      if (jugador.userId === usuario.id) {
+        return { ...jugador, avatar: usuario.avatar };
+      }
+
+      return jugador;
+    }));
   }, [usuario?.avatar, usuario?.id]);
   
   // Winners from backend
@@ -64,17 +77,13 @@ const useJuegoPoker = (usuario) => {
   const [idsGanadores, setIdsGanadores] = useState([]); // IDs de ganadores
   const [resultadoUltimaMano, setResultadoUltimaMano] = useState(null);
 
-  // Configurar listeners de WebSocket al montar
+  // Escuchar eventos del backend y reflejarlos en el estado local.
   useEffect(() => {
     gameSocket.connect();
 
-    // Actualizar estado del juego desde backend
-    gameSocket.on('gameStateUpdated', (estadoJuegoSocket) => {
-      console.log('🎮 gameStateUpdated recibido:', estadoJuegoSocket);
-      
+    const manejarEstadoJuegoActualizado = (estadoJuegoSocket) => {
       if (estadoJuegoSocket) {
         setIdJuego(estadoJuegoSocket.id);
-        // FIX: Separar phase y status correctamente
         setFaseJuego(estadoJuegoSocket.phase || 'waiting');
         setEstadoJuego(estadoJuegoSocket.status || 'waiting');
         setBote(estadoJuegoSocket.pot || 0);
@@ -89,34 +98,36 @@ const useJuegoPoker = (usuario) => {
         
         let indiceActual = -1;
         
-        // Actualizar estado del jugador actual
+        // Actualizar lista de jugadores y datos del usuario actual.
         if (estadoJuegoSocket.players && estadoJuegoSocket.players.length > 0) {
-          console.log('👥 Actualizando jugadores:', estadoJuegoSocket.players.length, estadoJuegoSocket.players);
+          const usuarioSesion = obtenerUsuarioSesion();
+          const idUsuarioActual = usuarioSesion?.id || usuario?.id;
+          const avatarUsuarioActual = usuarioSesion?.avatar || usuario?.avatar;
+          const jugadoresConAvatar = estadoJuegoSocket.players.map((jugador) => {
+            if (jugador.userId === idUsuarioActual && avatarUsuarioActual) {
+              return { ...jugador, avatar: avatarUsuarioActual };
+            }
 
-          // Usar avatar local (sessionStorage) para el jugador actual ya que el backend puede tener uno desactualizado
-          const usuarioSesion = JSON.parse(sessionStorage.getItem('user') || '{}');
-          const jugadoresConAvatar = estadoJuegoSocket.players.map((jugador) =>
-            jugador.userId === usuarioSesion.id && usuarioSesion.avatar
-              ? { ...jugador, avatar: usuarioSesion.avatar }
-              : jugador
-          );
+            return jugador;
+          });
+
           setJugadores(jugadoresConAvatar);
-          indiceActual = estadoJuegoSocket.players.findIndex((jugador) => jugador.userId === usuarioSesion.id);
+          indiceActual = jugadoresConAvatar.findIndex((jugador) => jugador.userId === idUsuarioActual);
           
-          // FIX: Manejar caso cuando currentIdx === -1 (espectador)
+          // Si no aparece en players, se trata como espectador.
           if (indiceActual !== -1) {
             setIndiceJugador(indiceActual);
-            const jugadorActual = estadoJuegoSocket.players[indiceActual];
+            const jugadorActual = jugadoresConAvatar[indiceActual];
             setFichasJugador(jugadorActual.chips || 0);
             setApuestaJugador(jugadorActual.betInPhase || 0);
             setCartasPropias(jugadorActual.holeCards || []);
             setJugadorSeRetiro(jugadorActual.folded || false);
-            // Resetear acciones cuando es tu turno o al empezar mano
+
+            // Al iniciar mano o al llegar tu turno, permitimos volver a actuar.
             if (estadoJuegoSocket.currentPlayerIndex === indiceActual || !jugadorActual.lastAction) {
               setJugadorYaActuo(false);
             }
           } else {
-            // Usuario es espectador, establecer valores por defecto
             setIndiceJugador(-1);
             setFichasJugador(0);
             setApuestaJugador(0);
@@ -126,15 +137,10 @@ const useJuegoPoker = (usuario) => {
           }
         }
         
-        // Actualizar turno actual
         if (estadoJuegoSocket.currentPlayerIndex !== undefined) {
-          console.log('🎯 Turno actual:', estadoJuegoSocket.currentPlayerIndex);
           setIndiceTurnoActual(estadoJuegoSocket.currentPlayerIndex);
         }
-        
-        console.log('🔍 Debug - playerIndex:', indiceActual, 'currentPlayerTurn:', estadoJuegoSocket.currentPlayerIndex);
-        console.log('🔍 Es mi turno?:', indiceActual === estadoJuegoSocket.currentPlayerIndex);
-        
+
         // Guardar múltiples ganadores si están disponibles
         if (estadoJuegoSocket.winners) {
           setGanadores(estadoJuegoSocket.winners);
@@ -143,18 +149,18 @@ const useJuegoPoker = (usuario) => {
           setIdsGanadores(estadoJuegoSocket.winnerIds);
         }
       }
-    });
+    };
 
     // Cambio de fase
-    gameSocket.on('phaseChanged', (datosFase) => {
+    const manejarCambioFase = (datosFase) => {
       if (datosFase.phase) {
         setFaseJuego(datosFase.phase);
         setCartasComunitarias(datosFase.communityCards || []);
       }
-    });
+    };
 
     // Fin del juego / Showdown
-    gameSocket.on('showdown', (datosShowdown) => {
+    const manejarShowdown = (datosShowdown) => {
       setFaseJuego('showdown');
       if (datosShowdown.winners) {
         setGanadores(datosShowdown.winners);
@@ -165,39 +171,42 @@ const useJuegoPoker = (usuario) => {
       if (datosShowdown.pot) {
         setBote(datosShowdown.pot);
       }
-    });
+    };
 
-    gameSocket.on('handOver', (handData) => {
+    const manejarFinDeMano = (handData) => {
       setResultadoUltimaMano(handData);
       setJugadorYaActuo(false);
-    });
+    };
 
-    gameSocket.on('turnDeadline', (datosLimiteTurno) => {
-      if (!datosLimiteTurno?.deadlineMs) return;
+    const manejarLimiteDeTurno = (datosLimiteTurno) => {
+      if (!datosLimiteTurno || !datosLimiteTurno.deadlineMs) return;
       setFechaLimiteTurnoMs(datosLimiteTurno.deadlineMs);
       const restante = Math.max(0, Math.ceil((datosLimiteTurno.deadlineMs - Date.now()) / 1000));
       setTiempoRestanteTurno(restante);
-    });
+    };
+
+    gameSocket.on('gameStateUpdated', manejarEstadoJuegoActualizado);
+    gameSocket.on('phaseChanged', manejarCambioFase);
+    gameSocket.on('showdown', manejarShowdown);
+    gameSocket.on('handOver', manejarFinDeMano);
+    gameSocket.on('turnDeadline', manejarLimiteDeTurno);
 
     return () => {
-      // FIX: Pasar las mismas referencias de funciones para limpiar correctamente
-      // No hay referencias específicas guardadas, así que usamos off sin callback
-      // para remover todos los listeners de ese evento
-      gameSocket.off('gameStateUpdated');
-      gameSocket.off('phaseChanged');
-      gameSocket.off('showdown');
-      gameSocket.off('handOver');
-      gameSocket.off('turnDeadline');
+      gameSocket.off('gameStateUpdated', manejarEstadoJuegoActualizado);
+      gameSocket.off('phaseChanged', manejarCambioFase);
+      gameSocket.off('showdown', manejarShowdown);
+      gameSocket.off('handOver', manejarFinDeMano);
+      gameSocket.off('turnDeadline', manejarLimiteDeTurno);
     };
-  }, []);
+  }, [usuario?.id]);
 
-  // Fallback local: si cambia de turno y no llegó deadline aún, iniciar una cuenta de 45s.
+  // Si el backend no manda deadline, usamos un timer local de respaldo.
   useEffect(() => {
     if (indiceTurnoActual === null || indiceTurnoActual === undefined) return;
     setFechaLimiteTurnoMs(Date.now() + DURACION_TURNO_SEGUNDOS * 1000);
   }, [indiceTurnoActual]);
 
-  // Actualizar contador visible cada segundo en base al deadline.
+  // Mostrar cuenta regresiva de turno en segundos.
   useEffect(() => {
     if (!fechaLimiteTurnoMs) return;
 
@@ -218,9 +227,9 @@ const useJuegoPoker = (usuario) => {
     }
   }, [indiceTurnoActual, indiceJugador]);
 
-  // Actions que envían al backend vía REST API
-  const enviarAccion = useCallback(async (accion, monto = 0) => {
-    const usuarioSesion = JSON.parse(sessionStorage.getItem('user') || '{}');
+  // Enviar acciones del jugador al backend (fold, call, raise...).
+  const enviarAccion = async (accion, monto = 0) => {
+    const usuarioSesion = obtenerUsuarioSesion();
     const idUsuarioSesion = usuarioSesion?.id || usuarioSesion?.userId;
 
     if (!idJuego || !idUsuarioSesion) {
@@ -228,144 +237,143 @@ const useJuegoPoker = (usuario) => {
       return { success: false, error: 'Falta contexto de juego' };
     }
 
-    try {
-      const response = await gameAPI.playerAction(idJuego, accion, monto);
-      const datos = response.data;
+    return gameAPI.playerAction(idJuego, accion, monto).then(
+      (respuestaAccion) => {
+        const datos = respuestaAccion.data;
 
-      if (datos?.success) {
-        console.log('✅ Acción procesada:', accion);
-        if (datos?.gameState) {
-          const siguiente = datos.gameState;
-          setIdJuego(siguiente.id || idJuego);
-          setFaseJuego(siguiente.phase || 'waiting');
-          setEstadoJuego(siguiente.status || 'waiting');
-          setBote(siguiente.pot || 0);
-          setBotesLaterales(siguiente.sidePots || []);
-          setCartasComunitarias(siguiente.communityCards || []);
-          const apuestaNormalizada = Number(siguiente.currentBet) || 0;
-          setApuestaActual(apuestaNormalizada);
-          setSubidaMinima(normalizarSubidaMinima(siguiente.minRaise, apuestaNormalizada));
-          setPosicionDealer(siguiente.dealerIndex || 0);
-          setPosicionCiegaPequena(siguiente.smallBlindIndex ?? 0);
-          setPosicionCiegaGrande(siguiente.bigBlindIndex ?? 0);
-          setIndiceTurnoActual(siguiente.currentPlayerIndex ?? null);
+        if (datos && datos.success) {
+          if (datos && datos.gameState) {
+            const siguiente = datos.gameState;
+            setIdJuego(siguiente.id || idJuego);
+            setFaseJuego(siguiente.phase || 'waiting');
+            setEstadoJuego(siguiente.status || 'waiting');
+            setBote(siguiente.pot || 0);
+            setBotesLaterales(siguiente.sidePots || []);
+            setCartasComunitarias(siguiente.communityCards || []);
+            const apuestaNormalizada = Number(siguiente.currentBet) || 0;
+            setApuestaActual(apuestaNormalizada);
+            setSubidaMinima(normalizarSubidaMinima(siguiente.minRaise, apuestaNormalizada));
+            setPosicionDealer(siguiente.dealerIndex || 0);
+            setPosicionCiegaPequena(siguiente.smallBlindIndex ?? 0);
+            setPosicionCiegaGrande(siguiente.bigBlindIndex ?? 0);
+            setIndiceTurnoActual(siguiente.currentPlayerIndex ?? null);
 
-          if (Array.isArray(siguiente.players)) {
-            setJugadores(siguiente.players);
-            const indiceYo = siguiente.players.findIndex((jugador) => jugador.userId === idUsuarioSesion);
-            if (indiceYo !== -1) {
-              setIndiceJugador(indiceYo);
-              const yo = siguiente.players[indiceYo];
-              setFichasJugador(yo.chips || 0);
-              setApuestaJugador(yo.betInPhase || 0);
-              setCartasPropias(yo.holeCards || []);
-              setJugadorSeRetiro(yo.folded || false);
+            if (Array.isArray(siguiente.players)) {
+              setJugadores(siguiente.players);
+              const indiceYo = siguiente.players.findIndex((jugador) => jugador.userId === idUsuarioSesion);
+              if (indiceYo !== -1) {
+                setIndiceJugador(indiceYo);
+                const datosJugadorActual = siguiente.players[indiceYo];
+                setFichasJugador(datosJugadorActual.chips || 0);
+                setApuestaJugador(datosJugadorActual.betInPhase || 0);
+                setCartasPropias(datosJugadorActual.holeCards || []);
+                setJugadorSeRetiro(datosJugadorActual.folded || false);
+              }
             }
           }
+
+          if (datos && datos.handOver) {
+            setResultadoUltimaMano({
+              winnerId: datos.winnerId || datos.winner?.userId || datos.winner?.id,
+              winnerName: datos.winnerName || datos.winner?.username || 'Desconocido',
+              winnerIds: datos.winnerIds || [],
+              winners: datos.winners || [],
+              potWon: datos.potWon ?? 0
+            });
+            setJugadorYaActuo(false);
+          }
+        } else {
+          console.error('❌ Error en acción:', datos?.error || datos);
         }
 
-        if (data.handOver) {
-          setResultadoUltimaMano({
-            winnerId: data.winnerId || data.winner?.userId || data.winner?.id,
-            winnerName: data.winnerName || data.winner?.username || 'Desconocido',
-            winnerIds: data.winnerIds || [],
-            winners: data.winners || [],
-            potWon: data.potWon ?? 0
-          });
-          setJugadorYaActuo(false);
-        }
-      } else {
-        console.error('❌ Error en acción:', datos?.error || datos);
+        return datos;
+      },
+      (errorDeAccion) => {
+        console.error('❌ Error enviando acción:', errorDeAccion?.response?.data || errorDeAccion.message);
+        return {
+          success: false,
+          error: errorDeAccion?.response?.data?.error || errorDeAccion?.response?.data?.message || errorDeAccion.message
+        };
       }
+    );
+  };
 
-      return datos;
-    } catch (error) {
-      console.error('❌ Error enviando acción:', error?.response?.data || error.message);
-      return {
-        success: false,
-        error: error?.response?.data?.error || error?.response?.data?.message || error.message
-      };
-    }
-  }, [idJuego]);
-
-  const handleFold = useCallback(() => {
+  const handleFold = () => {
     if (idJuego) {
-      console.log('📤 Enviando acción FOLD');
       enviarAccion('fold');
       setJugadorSeRetiro(true);
       setJugadorYaActuo(true);
     }
-  }, [idJuego, enviarAccion]);
+  };
 
-  const handleCheck = useCallback(() => {
+  const handleCheck = () => {
     if (idJuego) {
-      console.log('📤 Enviando acción CHECK');
       enviarAccion('check');
       setJugadorYaActuo(true);
     }
-  }, [idJuego, enviarAccion]);
+  };
 
-  const handleCall = useCallback(() => {
+  const handleCall = () => {
     if (idJuego) {
       const montoIgualar = apuestaActual - apuestaJugador;
-      console.log('📤 Enviando acción CALL', montoIgualar);
       enviarAccion('call', montoIgualar);
       setJugadorYaActuo(true);
     }
-  }, [idJuego, enviarAccion, apuestaActual, apuestaJugador]);
+  };
 
-  const handleRaise = useCallback((montoSubida) => {
+  const handleRaise = (montoSubida) => {
     if (idJuego) {
       const apuestaTotal = apuestaActual + montoSubida;
-      console.log('📤 Enviando acción RAISE', apuestaTotal);
       enviarAccion('raise', apuestaTotal);
       setJugadorYaActuo(true);
     }
-  }, [idJuego, enviarAccion, apuestaActual]);
+  };
 
-  const handleAllIn = useCallback(() => {
+  const handleAllIn = () => {
     if (idJuego) {
       const montoAllIn = fichasJugador;
-      console.log('📤 Enviando acción ALL-IN', montoAllIn);
       enviarAccion('all-in', montoAllIn);
       setJugadorYaActuo(true);
     }
-  }, [idJuego, enviarAccion, fichasJugador]);
+  };
 
-  // Game phase progression (backend controls)
-  const advanceGamePhase = useCallback(() => {
+  // El backend decide cuándo avanza la fase.
+  const advanceGamePhase = () => {
     // Backend maneja el avance de fases
     console.log('Esperando al backend para avanzar fase...');
-  }, []);
+  };
 
-  // Initialize new game - AHORA CONECTA CON BACKEND
-  const startNewGame = useCallback((initialPlayers, playerIdx, smallBlind, bigBlind) => {
+  // Iniciar partida local solo configura índice; el estado real llega del backend.
+  const startNewGame = (initialPlayers, playerIdx, smallBlind, bigBlind) => {
     setIndiceJugador(playerIdx);
-    // El backend se encargará de iniciar el juego
     console.log('Esperando al backend para iniciar el juego...');
-  }, []);
+  };
 
-  // Update community cards (backend will send)
-  const updateCommunityCards = useCallback((cards) => {
+  const updateCommunityCards = (cards) => {
     setCartasComunitarias(cards);
-  }, []);
+  };
 
-  // Update player chips (backend will send)
-  const updatePlayerChips = useCallback((chips) => {
+  const updatePlayerChips = (chips) => {
     setFichasJugador(chips);
-  }, []);
+  };
 
-  // Update turn (backend will send)
-  const updateCurrentTurn = useCallback((playerIndex) => {
+  const updateCurrentTurn = (playerIndex) => {
     setIndiceTurnoActual(playerIndex);
     setTiempoRestanteTurno(DURACION_TURNO_SEGUNDOS);
-  }, []);
+  };
 
-  // Check if player can perform actions
+  // Reglas simples para habilitar/deshabilitar botones de acción.
   const estadoJugadorActual = jugadores[indiceJugador];
   const comprometido = parseInt(estadoJugadorActual?.betInPhase ?? apuestaJugador) || 0;
   const apuestaActualNumero = parseInt(apuestaActual) || 0;
-  const subidaMinimaEfectiva = Math.max(1, parseInt(subidaMinima) || (apuestaActualNumero > 0 ? apuestaActualNumero : 1));
+  let subidaMinimaBase = parseInt(subidaMinima) || 0;
+  if (subidaMinimaBase <= 0 && apuestaActualNumero > 0) {
+    subidaMinimaBase = apuestaActualNumero;
+  }
+  if (subidaMinimaBase <= 0) {
+    subidaMinimaBase = 1;
+  }
+  const subidaMinimaEfectiva = Math.max(1, subidaMinimaBase);
   const esMiTurno = indiceTurnoActual === indiceJugador;
   const esPreflop = faseJuego === 'preflop' || faseJuego === 'pre-flop';
   const esCiegaGrande = indiceJugador === posicionCiegaGrande;
@@ -375,24 +383,9 @@ const useJuegoPoker = (usuario) => {
   const canFold = esMiTurno && !jugadorSeRetiro;
   const canAllIn = esMiTurno && fichasJugador > 0 && !jugadorSeRetiro;
 
-  // Preflop: si eres BB y ya igualaste (SB ha pagado), debes poder hacer check
+  // Caso especial de preflop: BB puede pasar si ya igualó.
   if (esMiTurno && esPreflop && esCiegaGrande && comprometido >= apuestaActualNumero && !jugadorSeRetiro) {
     canCheck = true;
-  }
-
-  // Debug logs para check
-  if (esMiTurno) {
-    console.log('🔍 [usePokerGame] Action Check Debug:', {
-      playerIndex: indiceJugador,
-      currentPlayerTurn: indiceTurnoActual,
-      isMyTurn: esMiTurno,
-      committed: comprometido,
-      currentBetNum: apuestaActualNumero,
-      playerHasFolded: jugadorSeRetiro,
-      canCheck,
-      canCall,
-      currentPlayerState: estadoJugadorActual
-    });
   }
 
   return {

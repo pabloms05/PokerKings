@@ -29,7 +29,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
     }
   };
 
-  const manejarEnvio = async (evento) => {
+  const manejarEnvio = (evento) => {
     evento.preventDefault();
     setErrorRegistro('');
     setErroresCampos({});
@@ -52,22 +52,20 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
 
     setCargando(true);
 
-    try {
-      // Llamar al servicio de registro
-      const resultado = await authService.register(
-        datosFormulario.nombreUsuario.trim(),
-        datosFormulario.correo.trim(),
-        datosFormulario.contrasena,
-        datosFormulario.avatar
-      );
-
-      if (resultado.success) {
-        console.log('✅ Registro exitoso:', resultado.user);
-        // Notificar al componente padre
-        if (alRegistroExitoso) {
-          alRegistroExitoso(resultado.user);
+    authService.register(
+      datosFormulario.nombreUsuario.trim(),
+      datosFormulario.correo.trim(),
+      datosFormulario.contrasena,
+      datosFormulario.avatar
+    ).then(
+      (resultado) => {
+        if (resultado.success) {
+          if (alRegistroExitoso) {
+            alRegistroExitoso(resultado.user);
+          }
+          return;
         }
-      } else {
+
         setErrorRegistro(resultado.error || 'Error al crear la cuenta');
         const erroresBackend = resultado.fieldErrors || {};
         setErroresCampos({
@@ -76,14 +74,25 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
           contrasena: erroresBackend.password,
           confirmarContrasena: erroresBackend.confirmPassword
         });
+      },
+      (errorDeConexion) => {
+        console.error('Error en registro:', errorDeConexion);
+        setErrorRegistro('Error de conexión con el servidor');
       }
-    } catch (err) {
-      console.error('Error en registro:', err);
-      setErrorRegistro('Error de conexión con el servidor');
-    } finally {
+    ).then(() => {
       setCargando(false);
-    }
+    });
   };
+
+  let contenidoBotonRegistro = '✨ Crear Cuenta';
+  if (cargando) {
+    contenidoBotonRegistro = (
+      <>
+        <span className="spinner"></span>
+        Creando cuenta...
+      </>
+    );
+  }
 
   return (
     <div className="register-container">
@@ -204,14 +213,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
             className="btn-register"
             disabled={cargando}
           >
-            {cargando ? (
-              <>
-                <span className="spinner"></span>
-                Creando cuenta...
-              </>
-            ) : (
-              '✨ Crear Cuenta'
-            )}
+            {contenidoBotonRegistro}
           </button>
         </form>
 

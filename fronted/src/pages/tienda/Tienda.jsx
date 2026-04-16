@@ -62,23 +62,23 @@ const PAQUETES = [
 function PaginaTienda({ usuario, alNavegar, alActualizarUsuario }) {
   const [paqueteEnCompra, setPaqueteEnCompra] = useState(null);
 
-  const manejarComprar = async (paquete) => {
+  const manejarComprar = (paquete) => {
     setPaqueteEnCompra(paquete.id);
 
     // Simulación de procesamiento de pago (aquí iría la integración real)
-    await new Promise((res) => setTimeout(res, 1200));
+    window.setTimeout(() => {
+      const nuevasFichas = Number(usuario?.chips || 0) + paquete.fichas;
+      const usuarioActualizado = { ...usuario, chips: nuevasFichas };
 
-    const nuevasFichas = Number(usuario?.chips || 0) + paquete.fichas;
-    const usuarioActualizado = { ...usuario, chips: nuevasFichas };
+      alActualizarUsuario(usuarioActualizado);
 
-    alActualizarUsuario(usuarioActualizado);
+      toast.success(
+        `🎉 ¡Compraste ${paquete.fichas.toLocaleString()} PK! Saldo: ${nuevasFichas.toLocaleString()} PK`,
+        { duration: 4000 }
+      );
 
-    toast.success(
-      `🎉 ¡Compraste ${paquete.fichas.toLocaleString()} PK! Saldo: ${nuevasFichas.toLocaleString()} PK`,
-      { duration: 4000 }
-    );
-
-    setPaqueteEnCompra(null);
+      setPaqueteEnCompra(null);
+    }, 1200);
   };
 
   return (
@@ -106,41 +106,57 @@ function PaginaTienda({ usuario, alNavegar, alActualizarUsuario }) {
 
       {/* Grid de paquetes */}
       <div className="paquetes-grid">
-        {PAQUETES.map((paquete) => (
-          <div
-            key={paquete.id}
-            className={`paquete-card ${paquete.badge === 'MÁS POPULAR' ? 'popular' : ''}`}
-            style={{ '--card-color': paquete.color }}
-          >
-            {paquete.badge && (
-              <div className="paquete-badge">{paquete.badge}</div>
-            )}
+        {PAQUETES.map((paquete) => {
+          let claseTarjeta = 'paquete-card';
+          if (paquete.badge === 'MÁS POPULAR') {
+            claseTarjeta = 'paquete-card popular';
+          }
 
-            <div className="paquete-icono">{paquete.icono}</div>
-            <div className="paquete-nombre">{paquete.nombre}</div>
-            <div className="paquete-fichas">
-              {paquete.fichas.toLocaleString()}
-              <span className="pk-label"> PK</span>
-            </div>
+          let botonDeshabilitado = false;
+          if (paqueteEnCompra === paquete.id) {
+            botonDeshabilitado = true;
+          }
 
-            <div className="paquete-precio">
-              {paquete.precio.toFixed(2)}€
-              <span className="moneda"> Euros ficticio</span>
-            </div>
+          let contenidoBoton = '💳 Comprar';
+          if (paqueteEnCompra === paquete.id) {
+            contenidoBoton = <span className="comprando-spinner">⏳ Procesando...</span>;
+          }
 
-            <button
-              className="btn-comprar"
-              onClick={() => manejarComprar(paquete)}
-              disabled={paqueteEnCompra === paquete.id}
+          let badgeTarjeta = null;
+          if (paquete.badge) {
+            badgeTarjeta = <div className="paquete-badge">{paquete.badge}</div>;
+          }
+
+          return (
+            <div
+              key={paquete.id}
+              className={claseTarjeta}
+              style={{ '--card-color': paquete.color }}
             >
-              {paqueteEnCompra === paquete.id ? (
-                <span className="comprando-spinner">⏳ Procesando...</span>
-              ) : (
-                '💳 Comprar'
-              )}
-            </button>
-          </div>
-        ))}
+              {badgeTarjeta}
+
+              <div className="paquete-icono">{paquete.icono}</div>
+              <div className="paquete-nombre">{paquete.nombre}</div>
+              <div className="paquete-fichas">
+                {paquete.fichas.toLocaleString()}
+                <span className="pk-label"> PK</span>
+              </div>
+
+              <div className="paquete-precio">
+                {paquete.precio.toFixed(2)}€
+                <span className="moneda"> Euros ficticio</span>
+              </div>
+
+              <button
+                className="btn-comprar"
+                onClick={() => manejarComprar(paquete)}
+                disabled={botonDeshabilitado}
+              >
+                {contenidoBoton}
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       {/* Nota legal */}

@@ -20,6 +20,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
   const openInvitaciones = () => setActiveOffcanvas('invitaciones');
   const openAccount = () => setShowAccountModal(true);
   const closeOffcanvas = () => setActiveOffcanvas(null);
+  const closeAccount = () => setShowAccountModal(false);
 
   // Manejar actualización de avatar
   const handleUpdateAvatar = (newAvatar) => {
@@ -44,13 +45,23 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
     if (onNavigate) onNavigate('mesas');
   };
 
+  const handleTienda = () => {
+    if (onNavigate) {
+      onNavigate('tienda');
+    }
+  };
+
+  const toggleNavbar = () => {
+    setNavbarExpanded(!navbarExpanded);
+  };
+
   // Función para cerrar sesión
   const handleCerrarSesion = () => {
     // Cerrar cualquier toast de confirmación previo
     toast.dismiss('logout-confirm');
 
     // Mostrar toast de confirmación
-    toast((t) => (
+    toast((instanciaToast) => (
       <div style={{ textAlign: 'center' }}>
         <p style={{ margin: '0 0 10px 0', fontWeight: 'bold' }}>
           ¿Estás seguro que quieres cerrar sesión?
@@ -58,7 +69,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
           <button
             onClick={() => {
-              toast.dismiss(t.id);
+              toast.dismiss(instanciaToast.id);
               if (onLogout) {
                 onLogout();
               }
@@ -77,7 +88,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
           </button>
           <button
             onClick={() => {
-              toast.dismiss(t.id);
+              toast.dismiss(instanciaToast.id);
             }}
             style={{
               padding: '8px 16px',
@@ -95,6 +106,11 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
     ), { duration: 5000, id: 'logout-confirm' });
   };
 
+  let claseMenuNavegacion = 'navbar-collapse collapse';
+  if (navbarExpanded) {
+    claseMenuNavegacion = 'navbar-collapse show';
+  }
+
   return (
     <>
       <nav className="navbar navbar-expand-lg navbar-dark navbar-casino">
@@ -107,7 +123,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
           <button
             className="navbar-toggler"
             type="button"
-            onClick={() => setNavbarExpanded(!navbarExpanded)}
+            onClick={toggleNavbar}
             aria-controls="navbarNav"
             aria-expanded={navbarExpanded}
             aria-label="Toggle navigation"
@@ -115,7 +131,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
             <span className="navbar-toggler-icon"></span>
           </button>
 
-          <div className={`navbar-collapse ${navbarExpanded ? 'show' : 'collapse'}`} id="navbarNav">
+          <div className={claseMenuNavegacion} id="navbarNav">
             <ul className="navbar-nav ms-auto">
               {/* 1. Inicio */}
               <li className="nav-item">
@@ -135,7 +151,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link nav-tienda"
-                  onClick={() => onNavigate && onNavigate('tienda')}
+                  onClick={handleTienda}
                 >
                   🛒 Tienda
                 </button>
@@ -232,7 +248,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
       {/* Modal de Mi Cuenta */}
       <AccountModal
         show={showAccountModal}
-        onHide={() => setShowAccountModal(false)}
+        onHide={closeAccount}
         user={user}
         onUpdateAvatar={handleUpdateAvatar}
       />

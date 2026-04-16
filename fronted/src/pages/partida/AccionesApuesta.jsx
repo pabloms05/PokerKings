@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './AccionesApuesta.css';
 
-// FIX: Memoizacion para evitar re-renders innecesarios
-const AccionesApuesta = React.memo(function AccionesApuesta({
+function AccionesApuesta({
   playerChips: fichasJugador = 0,
   currentBet: apuestaActual = 0,
   minRaise: subidaMinima = 0,
@@ -22,8 +21,18 @@ const AccionesApuesta = React.memo(function AccionesApuesta({
   const fichasJugadorSeguras = Math.max(0, Number(fichasJugador) || 0);
   const apuestaActualSegura = Math.max(0, Number(apuestaActual) || 0);
   const subidaMinimaSegura = Math.max(0, Number(subidaMinima) || 0);
-  const subidaPorDefecto = apuestaActualSegura > 0 ? apuestaActualSegura : 1;
-  const subidaMinimaPermitida = Math.min(fichasJugadorSeguras, subidaMinimaSegura > 0 ? subidaMinimaSegura : subidaPorDefecto);
+
+  let subidaPorDefecto = 1;
+  if (apuestaActualSegura > 0) {
+    subidaPorDefecto = apuestaActualSegura;
+  }
+
+  let subidaMinimaBase = subidaPorDefecto;
+  if (subidaMinimaSegura > 0) {
+    subidaMinimaBase = subidaMinimaSegura;
+  }
+
+  const subidaMinimaPermitida = Math.min(fichasJugadorSeguras, subidaMinimaBase);
   const subidaMaximaPermitida = fichasJugadorSeguras;
   const [montoSubida, setMontoSubida] = useState(subidaMinimaPermitida);
   const [mostrarSliderSubida, setMostrarSliderSubida] = useState(false);
@@ -66,8 +75,42 @@ const AccionesApuesta = React.memo(function AccionesApuesta({
     alIrAllIn(fichasJugador);
   };
 
+  let claseContenedorAcciones = 'betting-actions-container';
+  if (!esTurnoJugador) {
+    claseContenedorAcciones = 'betting-actions-container disabled';
+  }
+
+  let tituloFold = 'No ir';
+  if (!puedeRetirarse) {
+    tituloFold = 'No puedes hacer fold ahora';
+  }
+
+  let tituloCheck = 'Pasar sin apostar';
+  if (!puedePasar) {
+    tituloCheck = 'No puedes pasar, debes igualar la apuesta';
+  }
+
+  let tituloCall = 'Igualar';
+  if (!puedeIgualar) {
+    tituloCall = 'No puedes igualar ahora';
+  }
+
+  let tituloRaise = 'Subir';
+  if (!puedeSubir) {
+    tituloRaise = 'No puedes subir ahora';
+  }
+
+  let botonAllIn = null;
+  if (fichasJugador > 0) {
+    botonAllIn = (
+      <button className="btn-action btn-allin" onClick={manejarAllIn}>
+        🔥 All-In
+      </button>
+    );
+  }
+
   return (
-    <div className={`betting-actions-container${!esTurnoJugador ? ' disabled' : ''}`}>
+    <div className={claseContenedorAcciones}>
       {!esTurnoJugador && (
         <div className="waiting-turn">
           <span className="waiting-icon">⏳</span>
@@ -96,7 +139,7 @@ const AccionesApuesta = React.memo(function AccionesApuesta({
             className="btn-action btn-fold"
             onClick={alRetirarse}
             disabled={!esTurnoJugador || !puedeRetirarse}
-            title={!puedeRetirarse ? 'No puedes hacer fold ahora' : 'No ir'}
+            title={tituloFold}
           >
             🚫 No ir
           </button>
@@ -106,7 +149,7 @@ const AccionesApuesta = React.memo(function AccionesApuesta({
             className="btn-action btn-check" 
             onClick={alPasar}
             disabled={!esTurnoJugador || !puedePasar}
-            title={!puedePasar ? "No puedes pasar, debes igualar la apuesta" : "Pasar sin apostar"}
+            title={tituloCheck}
           >
             ✅ Pasar
           </button>
@@ -116,7 +159,7 @@ const AccionesApuesta = React.memo(function AccionesApuesta({
             className="btn-action btn-call"
             onClick={alIgualar}
             disabled={!esTurnoJugador || !puedeIgualar}
-            title={!puedeIgualar ? 'No puedes igualar ahora' : 'Igualar'}
+            title={tituloCall}
           >
             💵 Igualar {apuestaActual.toLocaleString()} PK
           </button>
@@ -129,7 +172,7 @@ const AccionesApuesta = React.memo(function AccionesApuesta({
               setMostrarSliderSubida(true);
             }}
             disabled={!esTurnoJugador || !puedeSubir}
-            title={!puedeSubir ? 'No puedes subir ahora' : 'Subir'}
+            title={tituloRaise}
           >
             💸 Subir
           </button>
@@ -162,7 +205,7 @@ const AccionesApuesta = React.memo(function AccionesApuesta({
               max={subidaMaximaPermitida}
               step={1}
               value={montoSubida}
-              onChange={(e) => setMontoSubida(parseInt(e.target.value, 10))}
+              onChange={(eventoSlider) => setMontoSubida(parseInt(eventoSlider.target.value, 10))}
               className="raise-slider"
             />
             <button
@@ -183,11 +226,7 @@ const AccionesApuesta = React.memo(function AccionesApuesta({
             <button className="btn-action btn-cancel" onClick={() => setMostrarSliderSubida(false)}>
               Cancelar
             </button>
-            {fichasJugador > 0 && (
-              <button className="btn-action btn-allin" onClick={manejarAllIn}>
-                🔥 All-In
-              </button>
-            )}
+            {botonAllIn}
             <button className="btn-action btn-confirm" onClick={manejarSubida}>
               ✅ Confirmar Subida
             </button>
@@ -208,6 +247,6 @@ const AccionesApuesta = React.memo(function AccionesApuesta({
       </div>
     </div>
   );
-});
+}
 
 export default AccionesApuesta;

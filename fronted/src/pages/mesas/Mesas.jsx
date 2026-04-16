@@ -9,15 +9,19 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
 
   // Cargar mesas desde el backend
   useEffect(() => {
-    const cargarMesas = async () => {
-      try {
-        const respuesta = await tableAPI.getAllTables();
-        setMesas(respuesta.data || []);
-      } catch (err) {
-        console.error('Error cargando mesas:', err);
-      } finally {
+    const cargarMesas = () => {
+      setCargando(true);
+
+      tableAPI.getAllTables().then(
+        (respuesta) => {
+          setMesas(respuesta.data || []);
+        },
+        (errorDeCarga) => {
+          console.error('Error cargando mesas:', errorDeCarga);
+        }
+      ).then(() => {
         setCargando(false);
-      }
+      });
     };
     
     cargarMesas();
@@ -45,49 +49,87 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
     };
   }, []);
 
-  return (
-    <div className="lobby-page">
-      <div className="lobby-header">
-        <button className="btn-back" onClick={() => alNavegar('inicio')}>
-          ← Volver
+  let sufijoMesa = 's';
+  let sufijoDisponible = 's';
+  if (mesas.length === 1) {
+    sufijoMesa = '';
+    sufijoDisponible = '';
+  }
+
+  let contenidoPrincipal = null;
+
+  if (cargando) {
+    contenidoPrincipal = <div className="loading-message">Cargando mesas...</div>;
+  } else if (mesas.length === 0) {
+    contenidoPrincipal = (
+      <div className="empty-message">
+        <p>No hay mesas disponibles</p>
+        <button onClick={() => alNavegar('crear')} className="btn-create-first">
+          + Crear Primera Mesa
         </button>
-        <h1 className="lobby-title">🎮 Mesas Disponibles</h1>
-        <div className="lobby-stats">
-          <span className="stat-badge">🟢 {mesas.length} mesa{mesas.length !== 1 ? 's' : ''} disponible{mesas.length !== 1 ? 's' : ''}</span>
-        </div>
       </div>
+    );
+  } else {
+    contenidoPrincipal = (
+      <>
+        {/* Scroll horizontal de mesas */}
+        <div className="tables-scroll-container">
+          <div className="tables-scroll">
+            {mesas.map((mesa) => {
+              const jugadoresActuales = mesa.currentPlayers || 0;
+              const estaLlena = jugadoresActuales >= mesa.maxPlayers;
+              const compraEntrada = Number(mesa.bigBlind || 0) * 100;
+              const fichasUsuario = Number(usuario?.chips || 0);
+              const fichasInsuficientes = compraEntrada > 0 && fichasUsuario < compraEntrada;
+              const deshabilitada = estaLlena || fichasInsuficientes;
 
-      {cargando ? (
-        <div className="loading-message">Cargando mesas...</div>
-      ) : mesas.length === 0 ? (
-        <div className="empty-message">
-          <p>No hay mesas disponibles</p>
-          <button onClick={() => alNavegar('crear')} className="btn-create-first">
-            + Crear Primera Mesa
-          </button>
-        </div>
-      ) : (
-        <>
-          {/* Scroll horizontal de mesas */}
-          <div className="tables-scroll-container">
-            <div className="tables-scroll">
-              {mesas.map((mesa) => (
-                (() => {
-                  const jugadoresActuales = mesa.currentPlayers || 0;
-                  const estaLlena = jugadoresActuales >= mesa.maxPlayers;
-                  const compraEntrada = Number(mesa.bigBlind || 0) * 100;
-                  const fichasUsuario = Number(usuario?.chips || 0);
-                  const fichasInsuficientes = compraEntrada > 0 && fichasUsuario < compraEntrada;
-                  const deshabilitada = estaLlena || fichasInsuficientes;
+              let iconoMesa = '🔓';
+              let tipoMesaTexto = 'Pública';
+              if (mesa.isPrivate) {
+                iconoMesa = '🔒';
+                tipoMesaTexto = 'Privada';
+              }
 
-                  return (
+              let estadoMesaTexto = '⏳ Esperando';
+              if (mesa.status === 'playing') {
+                estadoMesaTexto = '🎲 Jugando';
+              }
+
+              let claseBotonUnirse = 'btn-join';
+              if (deshabilitada) {
+                claseBotonUnirse = 'btn-join disabled';
+              }
+
+              let tituloBotonUnirse;
+              if (fichasInsuficientes) {
+                tituloBotonUnirse = `Necesitas ${compraEntrada} fichas para entrar`;
+              }
+
+              let textoBotonUnirse = '▶ Unirse';
+              if (estaLlena) {
+                textoBotonUnirse = '🔒 Mesa Llena';
+              } else if (fichasInsuficientes) {
+                textoBotonUnirse = '💸 Fichas Insuficientes';
+              }
+
+              let filaBots = null;
+              if (mesa.botsCount > 0) {
+                filaBots = (
+                  <div className="info-row">
+                    <span className="info-label">🤖 Bots:</span>
+                    <span className="info-value">{mesa.botsCount}</span>
+                  </div>
+                );
+              }
+
+              return (
                 <div key={mesa.id} className="table-card">
                   <div className="table-card-header">
                     <h3 className="table-name">
-                      {mesa.isPrivate ? '🔒' : '🔓'} {mesa.name}
+                      {iconoMesa} {mesa.name}
                     </h3>
                     <span className={`table-status ${mesa.status}`}>
-                      {mesa.status === 'playing' ? '🎲 Jugando' : '⏳ Esperando'}
+                      {estadoMesaTexto}
                     </span>
                   </div>
 
@@ -114,41 +156,54 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
                         <span className="info-label">🎟️ Buy-in:</span>
                         <span className="info-value">{compraEntrada}</span>
                       </div>
-                      {mesa.botsCount > 0 && (
-                        <div className="info-row">
-                          <span className="info-label">🤖 Bots:</span>
-                          <span className="info-value">{mesa.botsCount}</span>
-                        </div>
-                      )}
+                      {filaBots}
                       <div className="info-row">
                         <span className="info-label">🔐 Tipo:</span>
-                        <span className="info-value">{mesa.isPrivate ? 'Privada' : 'Pública'}</span>
+                        <span className="info-value">{tipoMesaTexto}</span>
                       </div>
                     </div>
 
                     {/* Botón unirse */}
-                    <button 
-                      className={`btn-join ${deshabilitada ? 'disabled' : ''}`}
-                      onClick={() => !deshabilitada && alUnirseMesa(mesa)}
+                    <button
+                      className={claseBotonUnirse}
+                      onClick={() => {
+                        if (!deshabilitada) {
+                          alUnirseMesa(mesa);
+                        }
+                      }}
                       disabled={deshabilitada}
-                      title={fichasInsuficientes ? `Necesitas ${compraEntrada} fichas para entrar` : undefined}
+                      title={tituloBotonUnirse}
                     >
-                      {estaLlena ? '🔒 Mesa Llena' : fichasInsuficientes ? '💸 Fichas Insuficientes' : '▶ Unirse'}
+                      {textoBotonUnirse}
                     </button>
                   </div>
                 </div>
-                  )
-                })()
-              ))}
-            </div>
+              );
+            })}
           </div>
+        </div>
 
-          {/* Indicador de scroll */}
-          <div className="scroll-hint">
-            ← Desliza para ver más mesas →
-          </div>
-        </>
-      )}
+        {/* Indicador de scroll */}
+        <div className="scroll-hint">
+          ← Desliza para ver más mesas →
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <div className="lobby-page">
+      <div className="lobby-header">
+        <button className="btn-back" onClick={() => alNavegar('inicio')}>
+          ← Volver
+        </button>
+        <h1 className="lobby-title">🎮 Mesas Disponibles</h1>
+        <div className="lobby-stats">
+          <span className="stat-badge">🟢 {mesas.length} mesa{sufijoMesa} disponible{sufijoDisponible}</span>
+        </div>
+      </div>
+
+      {contenidoPrincipal}
     </div>
   );
 }

@@ -16,36 +16,55 @@ function AmigosOffcanvas({ show, onHide }) {
     friendsRef.current = amigos;
   }, [amigos]);
 
-  const loadFriendsData = async () => {
-    try {
-      setLoading(true);
-      const [friendsRes, pendingRes] = await Promise.all([
-        friendAPI.getFriends(),
-        friendAPI.getPendingRequests()
-      ]);
+  const loadFriendsData = () => {
+    setLoading(true);
 
-      const friendsList = Array.isArray(friendsRes.data) ? friendsRes.data : [];
-      if (friendsList.length > 0) {
-        try {
-          const friendIds = friendsList.map((friend) => friend.id).filter(Boolean);
-          const onlineResponse = await friendAPI.getOnlineStatus(friendIds);
-          const onlineStatus = onlineResponse?.data?.onlineStatus || {};
-          setAmigos(friendsList.map((friend) => ({
-            ...friend,
-            online: !!onlineStatus[String(friend.id)]
-          })));
-        } catch {
-          setAmigos(friendsList.map((friend) => ({ ...friend, online: false })));
+    return Promise.all([
+      friendAPI.getFriends(),
+      friendAPI.getPendingRequests()
+    ]).then(
+      (respuestas) => {
+        const respuestaAmigos = respuestas[0];
+        const respuestaPendientes = respuestas[1];
+
+        let listaAmigos = [];
+        if (respuestaAmigos && Array.isArray(respuestaAmigos.data)) {
+          listaAmigos = respuestaAmigos.data;
         }
-      } else {
-        setAmigos([]);
+
+        let promesaOnline = Promise.resolve();
+        if (listaAmigos.length > 0) {
+          const idsAmigos = listaAmigos.map((amigo) => amigo.id).filter(Boolean);
+          promesaOnline = friendAPI.getOnlineStatus(idsAmigos).then(
+            (respuestaOnline) => {
+              const estadoOnline = respuestaOnline?.data?.onlineStatus || {};
+              setAmigos(listaAmigos.map((amigo) => ({
+                ...amigo,
+                online: !!estadoOnline[String(amigo.id)]
+              })));
+            },
+            () => {
+              setAmigos(listaAmigos.map((amigo) => ({ ...amigo, online: false })));
+            }
+          );
+        } else {
+          setAmigos([]);
+        }
+
+        return promesaOnline.then(() => {
+          let listaPendientes = [];
+          if (respuestaPendientes && Array.isArray(respuestaPendientes.data)) {
+            listaPendientes = respuestaPendientes.data;
+          }
+          setPendientes(listaPendientes);
+        });
+      },
+      (errorCarga) => {
+        toast.error(errorCarga?.response?.data?.message || 'No se pudieron cargar los amigos');
       }
-      setPendientes(Array.isArray(pendingRes.data) ? pendingRes.data : []);
-    } catch (error) {
-      toast.error(error?.response?.data?.message || 'No se pudieron cargar los amigos');
-    } finally {
+    ).then(() => {
       setLoading(false);
-    }
+    });
   };
 
   useEffect(() => {
@@ -69,21 +88,27 @@ function AmigosOffcanvas({ show, onHide }) {
     let isCancelled = false;
     setSearchingUsers(true);
 
-    const timeoutId = setTimeout(async () => {
-      try {
-        const response = await friendAPI.searchUsers(query, 8);
-        if (!isCancelled) {
-          setSearchResults(Array.isArray(response?.data) ? response.data : []);
+    const timeoutId = setTimeout(() => {
+      friendAPI.searchUsers(query, 8).then(
+        (respuestaBusqueda) => {
+          if (!isCancelled) {
+            let resultados = [];
+            if (respuestaBusqueda && Array.isArray(respuestaBusqueda.data)) {
+              resultados = respuestaBusqueda.data;
+            }
+            setSearchResults(resultados);
+          }
+        },
+        () => {
+          if (!isCancelled) {
+            setSearchResults([]);
+          }
         }
-      } catch (error) {
-        if (!isCancelled) {
-          setSearchResults([]);
-        }
-      } finally {
+      ).then(() => {
         if (!isCancelled) {
           setSearchingUsers(false);
         }
-      }
+      });
     }, 280);
 
     return () => {
@@ -99,35 +124,39 @@ function AmigosOffcanvas({ show, onHide }) {
       const friendUserId = String(payload?.userId || '');
       if (!friendUserId) return;
 
-      setAmigos((prev) => prev.map((friend) => (
-        String(friend?.id) === friendUserId
-          ? { ...friend, online: !!payload?.online }
-          : friend
-      )));
+      setAmigos((amigosPrevios) => amigosPrevios.map((amigo) => {
+        if (amigo && String(amigo.id) === friendUserId) {
+          return { ...amigo, online: !!payload?.online };
+        }
+
+        return amigo;
+      }));
     };
 
     const onPresenceSnapshot = (payload) => {
       const onlineStatus = payload?.onlineStatus || {};
-      setAmigos((prev) => prev.map((friend) => ({
+      setAmigos((amigosPrevios) => amigosPrevios.map((friend) => ({
         ...friend,
         online: !!onlineStatus[String(friend?.id)]
       })));
     };
 
-    const refreshOnlineStatus = async () => {
+    const refreshOnlineStatus = () => {
       const friendIds = friendsRef.current.map((friend) => friend?.id).filter(Boolean);
       if (friendIds.length === 0) return;
 
-      try {
-        const response = await friendAPI.getOnlineStatus(friendIds);
-        const onlineStatus = response?.data?.onlineStatus || {};
-        setAmigos((prev) => prev.map((friend) => ({
-          ...friend,
-          online: !!onlineStatus[String(friend?.id)]
-        })));
-      } catch (error) {
-        console.warn('No se pudo refrescar online-status en panel amigos:', error?.message || error);
-      }
+      friendAPI.getOnlineStatus(friendIds).then(
+        (respuestaOnline) => {
+          const estadoOnline = respuestaOnline?.data?.onlineStatus || {};
+          setAmigos((amigosPrevios) => amigosPrevios.map((friend) => ({
+            ...friend,
+            online: !!estadoOnline[String(friend?.id)]
+          })));
+        },
+        (errorOnline) => {
+          console.warn('No se pudo refrescar online-status en panel amigos:', errorOnline?.message || errorOnline);
+        }
+      );
     };
 
     socketService.onFriendPresence(onFriendPresence);
@@ -149,70 +178,231 @@ function AmigosOffcanvas({ show, onHide }) {
     };
   }, [show]);
 
-  const handleAgregarAmigo = async () => {
+  const handleAgregarAmigo = () => {
     const target = buscarAmigo.trim();
     if (!target) return;
 
-    try {
-      await friendAPI.sendFriendRequest(target);
-      toast.success('Solicitud de amistad enviada');
-      setBuscarAmigo('');
-      setSearchResults([]);
-      await loadFriendsData();
-    } catch (error) {
-      toast.error(error?.response?.data?.message || 'No se pudo enviar la solicitud');
-    }
+    friendAPI.sendFriendRequest(target).then(
+      () => {
+        toast.success('Solicitud de amistad enviada');
+        setBuscarAmigo('');
+        setSearchResults([]);
+        return loadFriendsData();
+      },
+      (errorSolicitud) => {
+        toast.error(errorSolicitud?.response?.data?.message || 'No se pudo enviar la solicitud');
+      }
+    );
   };
 
-  const handleAgregarDesdeResultado = async (candidate) => {
-    if (!candidate?.id) return;
+  const handleAgregarDesdeResultado = (candidate) => {
+    if (!candidate || !candidate.id) return;
 
-    try {
-      await friendAPI.sendFriendRequest({ receiverId: candidate.id });
-      toast.success(`Solicitud enviada a ${candidate.username}`);
-      setBuscarAmigo('');
-      setSearchResults([]);
-      await loadFriendsData();
-    } catch (error) {
-      toast.error(error?.response?.data?.message || 'No se pudo enviar la solicitud');
-    }
+    friendAPI.sendFriendRequest({ receiverId: candidate.id }).then(
+      () => {
+        toast.success(`Solicitud enviada a ${candidate.username}`);
+        setBuscarAmigo('');
+        setSearchResults([]);
+        return loadFriendsData();
+      },
+      (errorSolicitud) => {
+        toast.error(errorSolicitud?.response?.data?.message || 'No se pudo enviar la solicitud');
+      }
+    );
   };
 
-  const handleAccept = async (requestId) => {
-    try {
-      await friendAPI.acceptFriendRequest(requestId);
-      toast.success('Solicitud aceptada');
-      await loadFriendsData();
-    } catch (error) {
-      toast.error(error?.response?.data?.message || 'No se pudo aceptar la solicitud');
-    }
+  const handleAccept = (requestId) => {
+    friendAPI.acceptFriendRequest(requestId).then(
+      () => {
+        toast.success('Solicitud aceptada');
+        return loadFriendsData();
+      },
+      (errorAceptacion) => {
+        toast.error(errorAceptacion?.response?.data?.message || 'No se pudo aceptar la solicitud');
+      }
+    );
   };
 
-  const handleReject = async (requestId) => {
-    try {
-      await friendAPI.rejectFriendRequest(requestId);
-      toast.success('Solicitud rechazada');
-      await loadFriendsData();
-    } catch (error) {
-      toast.error(error?.response?.data?.message || 'No se pudo rechazar la solicitud');
-    }
+  const handleReject = (requestId) => {
+    friendAPI.rejectFriendRequest(requestId).then(
+      () => {
+        toast.success('Solicitud rechazada');
+        return loadFriendsData();
+      },
+      (errorRechazo) => {
+        toast.error(errorRechazo?.response?.data?.message || 'No se pudo rechazar la solicitud');
+      }
+    );
   };
 
-  const handleRemoveFriend = async (friendId) => {
-    try {
-      await friendAPI.removeFriend(friendId);
-      toast.success('Amigo eliminado');
-      await loadFriendsData();
-    } catch (error) {
-      toast.error(error?.response?.data?.message || 'No se pudo eliminar el amigo');
-    }
+  const handleRemoveFriend = (friendId) => {
+    friendAPI.removeFriend(friendId).then(
+      () => {
+        toast.success('Amigo eliminado');
+        return loadFriendsData();
+      },
+      (errorEliminacion) => {
+        toast.error(errorEliminacion?.response?.data?.message || 'No se pudo eliminar el amigo');
+      }
+    );
   };
+
+  let claseOffcanvas = 'offcanvas offcanvas-start offcanvas-casino';
+  if (show) {
+    claseOffcanvas = 'offcanvas offcanvas-start offcanvas-casino show';
+  }
+
+  let visibilidadOffcanvas = 'hidden';
+  if (show) {
+    visibilidadOffcanvas = 'visible';
+  }
+
+  let contenidoBusqueda = null;
+  if (buscarAmigo.trim().length >= 2) {
+    contenidoBusqueda = (
+      <div className="list-group mt-2">
+        {searchingUsers && (
+          <div className="list-group-item text-muted">
+            Buscando usuarios...
+          </div>
+        )}
+
+        {!searchingUsers && searchResults.length === 0 && (
+          <div className="list-group-item text-muted">
+            Sin resultados para "{buscarAmigo.trim()}"
+          </div>
+        )}
+
+        {!searchingUsers && searchResults.length > 0 && (
+          <>
+            {searchResults.map((candidate) => {
+              let claseEstadoCandidato = 'badge ms-2 bg-secondary';
+              let textoEstadoCandidato = 'Offline';
+              if (candidate.online) {
+                claseEstadoCandidato = 'badge ms-2 bg-success';
+                textoEstadoCandidato = 'Online';
+              }
+
+              return (
+                <div
+                  key={candidate.id}
+                  className="list-group-item d-flex justify-content-between align-items-center"
+                >
+                  <div>
+                    <span className="me-2">{candidate.avatar || '👤'}</span>
+                    <strong>{candidate.username}</strong>
+                    <span
+                      className={claseEstadoCandidato}
+                      style={{ fontSize: '0.7rem' }}
+                    >
+                      {textoEstadoCandidato}
+                    </span>
+                  </div>
+                  <button
+                    className="btn btn-sm btn-primary"
+                    onClick={() => handleAgregarDesdeResultado(candidate)}
+                  >
+                    Agregar
+                  </button>
+                </div>
+              );
+            })}
+          </>
+        )}
+      </div>
+    );
+  }
+
+  let contenidoPendientes = (
+    <div className="text-muted mb-3">
+      <small>No tienes solicitudes pendientes</small>
+    </div>
+  );
+  if (pendientes.length > 0) {
+    contenidoPendientes = (
+      <div className="list-group mb-3">
+        {pendientes.map((solicitud) => (
+          <div
+            key={solicitud.id}
+            className="list-group-item d-flex justify-content-between align-items-center"
+          >
+            <div>
+              <span className="me-2">{solicitud.sender?.avatar || '👤'}</span>
+              <strong>{solicitud.sender?.username || 'Usuario'}</strong>
+            </div>
+            <div className="d-flex gap-2">
+              <button
+                className="btn btn-sm btn-success"
+                onClick={() => handleAccept(solicitud.id)}
+              >
+                Aceptar
+              </button>
+              <button
+                className="btn btn-sm btn-outline-danger"
+                onClick={() => handleReject(solicitud.id)}
+              >
+                Rechazar
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  let contenidoAmigos = (
+    <div className="text-center text-muted py-5">
+      <p>No tienes amigos aún</p>
+      <small>Agrega amigos para comenzar</small>
+    </div>
+  );
+  if (loading) {
+    contenidoAmigos = <div className="text-center text-muted py-4">Cargando...</div>;
+  }
+  if (!loading && amigos.length > 0) {
+    contenidoAmigos = (
+      <div className="list-group">
+        {amigos.map((amigo) => {
+          let claseEstadoAmigo = 'badge ms-2 bg-secondary';
+          let textoEstadoAmigo = 'Offline';
+          if (amigo.online) {
+            claseEstadoAmigo = 'badge ms-2 bg-success';
+            textoEstadoAmigo = 'Online';
+          }
+
+          return (
+            <div
+              key={amigo.id}
+              className="list-group-item d-flex justify-content-between align-items-center"
+            >
+              <div>
+                <span className="me-2">{amigo.avatar || '👤'}</span>
+                <strong>{amigo.username}</strong>
+                <span
+                  className={claseEstadoAmigo}
+                  style={{ fontSize: '0.7rem' }}
+                >
+                  {textoEstadoAmigo}
+                </span>
+              </div>
+              <button
+                className="btn btn-sm btn-outline-danger"
+                onClick={() => handleRemoveFriend(amigo.id)}
+              >
+                Eliminar
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div 
-      className={`offcanvas offcanvas-start offcanvas-casino ${show ? 'show' : ''}`} 
+      className={claseOffcanvas}
       tabIndex="-1"
-      style={{ visibility: show ? 'visible' : 'hidden' }}
+      style={{ visibility: visibilidadOffcanvas }}
     >
       <div className="offcanvas-header">
         <h5 className="offcanvas-title">👥 Amigos</h5>
@@ -232,7 +422,7 @@ function AmigosOffcanvas({ show, onHide }) {
               className="form-control" 
               placeholder="Nombre de usuario"
               value={buscarAmigo}
-              onChange={(e) => setBuscarAmigo(e.target.value)}
+              onChange={(eventoTexto) => setBuscarAmigo(eventoTexto.target.value)}
             />
             <button 
               className="btn btn-primary" 
@@ -242,120 +432,19 @@ function AmigosOffcanvas({ show, onHide }) {
             </button>
           </div>
 
-          {buscarAmigo.trim().length >= 2 && (
-            <div className="list-group mt-2">
-              {searchingUsers ? (
-                <div className="list-group-item text-muted">
-                  Buscando usuarios...
-                </div>
-              ) : searchResults.length === 0 ? (
-                <div className="list-group-item text-muted">
-                  Sin resultados para "{buscarAmigo.trim()}"
-                </div>
-              ) : (
-                searchResults.map((candidate) => (
-                  <div
-                    key={candidate.id}
-                    className="list-group-item d-flex justify-content-between align-items-center"
-                  >
-                    <div>
-                      <span className="me-2">{candidate.avatar || '👤'}</span>
-                      <strong>{candidate.username}</strong>
-                      <span
-                        className={`badge ms-2 ${candidate.online ? 'bg-success' : 'bg-secondary'}`}
-                        style={{ fontSize: '0.7rem' }}
-                      >
-                        {candidate.online ? 'Online' : 'Offline'}
-                      </span>
-                    </div>
-                    <button
-                      className="btn btn-sm btn-primary"
-                      onClick={() => handleAgregarDesdeResultado(candidate)}
-                    >
-                      Agregar
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
+          {contenidoBusqueda}
         </div>
 
         <hr />
 
         <h6>Solicitudes pendientes ({pendientes.length})</h6>
-        {pendientes.length === 0 ? (
-          <div className="text-muted mb-3">
-            <small>No tienes solicitudes pendientes</small>
-          </div>
-        ) : (
-          <div className="list-group mb-3">
-            {pendientes.map((req) => (
-              <div
-                key={req.id}
-                className="list-group-item d-flex justify-content-between align-items-center"
-              >
-                <div>
-                  <span className="me-2">{req.sender?.avatar || '👤'}</span>
-                  <strong>{req.sender?.username || 'Usuario'}</strong>
-                </div>
-                <div className="d-flex gap-2">
-                  <button
-                    className="btn btn-sm btn-success"
-                    onClick={() => handleAccept(req.id)}
-                  >
-                    Aceptar
-                  </button>
-                  <button
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => handleReject(req.id)}
-                  >
-                    Rechazar
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        {contenidoPendientes}
 
         <hr />
 
         {/* Lista de amigos */}
         <h6>Mis amigos ({amigos.length})</h6>
-        {loading ? (
-          <div className="text-center text-muted py-4">Cargando...</div>
-        ) : amigos.length === 0 ? (
-          <div className="text-center text-muted py-5">
-            <p>No tienes amigos aún</p>
-            <small>Agrega amigos para comenzar</small>
-          </div>
-        ) : (
-          <div className="list-group">
-            {amigos.map(amigo => (
-              <div 
-                key={amigo.id} 
-                className="list-group-item d-flex justify-content-between align-items-center"
-              >
-                <div>
-                  <span className="me-2">{amigo.avatar || '👤'}</span>
-                  <strong>{amigo.username}</strong>
-                  <span
-                    className={`badge ms-2 ${amigo.online ? 'bg-success' : 'bg-secondary'}`}
-                    style={{ fontSize: '0.7rem' }}
-                  >
-                    {amigo.online ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <button
-                  className="btn btn-sm btn-outline-danger"
-                  onClick={() => handleRemoveFriend(amigo.id)}
-                >
-                  Eliminar
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        {contenidoAmigos}
       </div>
     </div>
   );
