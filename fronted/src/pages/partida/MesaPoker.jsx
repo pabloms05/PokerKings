@@ -18,7 +18,8 @@ function PokerTable({
   sidePots = [],
   currentPlayerId = null,
   currentUserIndex = null,
-  currentPlayerIndex = null
+  currentPlayerIndex = null,
+  onEmptySeatClick = null
 }) {
   // Alias internos para mantener consistencia con el resto del componente.
   const maxJugadores = maxPlayers;
@@ -379,10 +380,15 @@ function PokerTable({
                 </div>
               </>
             ) : (
-              <div className="empty-seat">
+              <button
+                type="button"
+                className="empty-seat"
+                onClick={() => onEmptySeatClick?.(indiceAsiento)}
+                aria-label={`Invitar a un amigo al asiento ${indiceAsiento + 1}`}
+              >
                 <div className="empty-seat-icon">+</div>
                 <div className="empty-seat-text">Asiento {indiceAsiento + 1}</div>
-              </div>
+              </button>
             )}
           </div>
         );

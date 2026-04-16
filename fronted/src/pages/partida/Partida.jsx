@@ -701,6 +701,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
           sidePots={juegoPoker.sidePots}
           currentUserIndex={indiceUsuarioActual}
           currentPlayerIndex={juegoPoker.currentPlayerTurn}
+          onEmptySeatClick={manejarAbrirInvitar}
         />
           );
         })()}
