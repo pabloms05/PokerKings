@@ -272,19 +272,19 @@ const useJuegoPoker = (usuario) => {
             }
           }
 
-          if (datos && datos.handOver) {
-            setResultadoUltimaMano({
-              winnerId: datos.winnerId || datos.winner?.userId || datos.winner?.id,
-              winnerName: datos.winnerName || datos.winner?.username || 'Desconocido',
-              winnerIds: datos.winnerIds || [],
-              winners: datos.winners || [],
-              potWon: datos.potWon ?? 0
-            });
-            setJugadorYaActuo(false);
-          }
-        } else {
-          console.error('❌ Error en acción:', datos?.error || datos);
+        if (data.handOver) {
+          setResultadoUltimaMano({
+            winnerId: data.winnerId || data.winner?.userId || data.winner?.id,
+            winnerName: data.winnerName || data.winner?.username || 'Desconocido',
+            winnerIds: data.winnerIds || [],
+            winners: data.winners || [],
+            potWon: data.potWon ?? 0
+          });
+          setJugadorYaActuo(false);
         }
+      } else {
+        console.error('❌ Error en acción:', datos?.error || datos);
+      }
 
         return datos;
       },

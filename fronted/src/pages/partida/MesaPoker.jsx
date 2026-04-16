@@ -18,8 +18,22 @@ function PokerTable({
   sidePots = [],
   currentPlayerId = null,
   currentUserIndex = null,
-  currentPlayerIndex = null
+  currentPlayerIndex = null,
+  onEmptySeatClick = null
 }) {
+  // Alias internos para mantener consistencia con el resto del componente.
+  const maxJugadores = maxPlayers;
+  const jugadores = players;
+  const faseJuego = gamePhase;
+  const cartasComunitarias = communityCards;
+  const bote = pot;
+  const botesLaterales = sidePots;
+  const posicionDealer = dealerPosition;
+  const posicionCiegaPequena = smallBlindPosition;
+  const posicionCiegaGrande = bigBlindPosition;
+  const indiceUsuarioActual = currentUserIndex;
+  const indiceTurnoActual = currentPlayerIndex;
+
   // Estado para rastrear qué cartas ya fueron reveladas
   const [cartasReveladas, setCartasReveladas] = useState([]);
 
@@ -274,30 +288,24 @@ function PokerTable({
 
   const posiciones = posicionesAsientos[maxPlayers] || posicionesAsientos[6];
 
-  // Reordenar jugadores para que el usuario actual quede en el asiento inferior.
-  let indiceCentroInferior = maxPlayers - 1;
-  if (maxPlayers === 6) {
-    indiceCentroInferior = 3;
-  } else if (maxPlayers === 4) {
-    indiceCentroInferior = 2;
-  }
-  const jugadoresMostrados = Array.from({ length: maxPlayers }, () => null);
-  const mapaIndicesJugadores = {};
+  // Reordenar jugadores para que el usuario actual siempre esté en la posición inferior (center-bottom)
+  const indiceCentroInferior = maxJugadores === 6 ? 3 : (maxJugadores === 4 ? 2 : maxJugadores - 1);
+  let jugadoresMostrados = [];
+  let mapaIndicesJugadores = {};
 
-  if (indiceUsuarioActualCalculado !== null && indiceUsuarioActualCalculado !== undefined && players.length > 0 && indiceUsuarioActualCalculado >= 0) {
-    // Rotación circular: mueve asientos para que tu jugador quede siempre abajo.
-    const desplazamiento = (indiceCentroInferior - indiceUsuarioActualCalculado + players.length) % players.length;
-
-    for (let i = 0; i < maxPlayers; i++) {
-      if (i < players.length) {
-        const indiceOriginal = (i - desplazamiento + players.length) % players.length;
-        const jugadorOriginal = players[indiceOriginal];
-        if (jugadorOriginal && jugadorOriginal.isSittingOut) {
-          jugadoresMostrados[i] = null;
-        } else {
-          jugadoresMostrados[i] = jugadorOriginal;
-        }
-        mapaIndicesJugadores[i] = indiceOriginal;
+  // Construir array de posiciones con rotación para poner al usuario en la posición inferior
+  if (indiceUsuarioActual !== null && indiceUsuarioActual !== undefined && jugadores.length > 0 && indiceUsuarioActual >= 0) {
+    // Calcular offset: cuántas posiciones rotar hacia la derecha para que el usuario esté en centerBottomIndex
+    const desplazamiento = (indiceCentroInferior - indiceUsuarioActual + jugadores.length) % jugadores.length;
+    
+    // Llenar el array de posiciones con jugadores rotados
+    for (let i = 0; i < maxJugadores; i++) {
+      if (i < jugadores.length) {
+        // Calcular el índice original del jugador que debería estar en esta posición
+        const originalIndex = (currentUserIndex + i - offset + players.length) % players.length;
+        const originalPlayer = players[originalIndex];
+        displayedPlayers[i] = originalPlayer?.isSittingOut ? null : originalPlayer;
+        playerIndexMap[i] = originalIndex;
       } else {
         mapaIndicesJugadores[i] = null;
       }
@@ -453,7 +461,79 @@ function PokerTable({
             className={claseAsiento}
             style={posicion}
           >
-            {renderizarContenidoAsiento(jugador, indiceOriginal, esJugadorActual, indiceAsiento)}
+            {jugador ? (
+              <>
+                {/* Cartas del jugador - ARRIBA del player-info */}
+                <div className="player-cards">
+                  {esJugadorActual && jugador.holeCards && jugador.holeCards.length > 0 ? (
+                    // Mostrar cartas reveladas solo para el jugador actual
+                    jugador.holeCards.map((carta, indiceCarta) => {
+                      const imagenCarta = obtenerImagenCarta(carta);
+                      return (
+                        <div key={indiceCarta} className="player-card-revealed">
+                          {imagenCarta ? (
+                            <img src={imagenCarta} alt={carta} />
+                          ) : (
+                            <div className="card-placeholder">?</div>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : esJugadorActual ? (
+                    // Jugador actual sin cartas asignadas (esperando)
+                    <>
+                      <div className="player-card">🂠</div>
+                      <div className="player-card">🂠</div>
+                    </>
+                  ) : (
+                    // Mostrar cartas ocultas para otros jugadores
+                    <>
+                      <div className="player-card">🂠</div>
+                      <div className="player-card">🂠</div>
+                    </>
+                  )}
+                </div>
+
+                {/* Info del jugador - DEBAJO de las cartas */}
+                <div className="player-info">
+                  {/* Position Indicators */}
+                  {posicionDealer === indiceOriginal && (
+                    <div className="position-badge dealer-badge">D</div>
+                  )}
+                  {posicionCiegaPequena === indiceOriginal && (
+                    <div className="position-badge sb-badge">SB</div>
+                  )}
+                  {posicionCiegaGrande === indiceOriginal && (
+                    <div className="position-badge bb-badge">BB</div>
+                  )}
+                  
+                  <div className="player-header">
+                    <div className="player-avatar">
+                      {(() => {
+                        // Si no hay avatar o es una ruta de imagen
+                        if (!jugador.avatar || jugador.avatar.includes('.png') || jugador.avatar.includes('.jpg') || jugador.avatar.includes('default-avatar')) {
+                          // Si es bot, usar emoji de robot, sino cara genérica
+                          return jugador.username && jugador.username.toLowerCase().includes('bot') ? '🤖' : '👤';
+                        }
+                        // Usar el emoji del avatar
+                        return jugador.avatar;
+                      })()}
+                    </div>
+                    <div className="player-level">🎖️ Nv {jugador.level || 1}</div>
+                  </div>
+                  <div className="player-name">{jugador.username}</div>
+                  <div className="player-balance">
+                    <span className="pk-coin">🪙</span>
+                    <span className="balance-amount">{(jugador.chips || 0).toLocaleString()} PK</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="empty-seat">
+                <div className="empty-seat-icon">+</div>
+                <div className="empty-seat-text">Asiento {indiceAsiento + 1}</div>
+              </div>
+            )}
           </div>
         );
       })}

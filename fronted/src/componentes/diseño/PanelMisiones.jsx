@@ -1,56 +1,67 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { missionAPI } from '../../servicios/api';
+import toast from 'react-hot-toast';
 
-function MisionesOffcanvas({ show, onHide }) {
-  // Lista de misiones diarias (vendrá del backend)
-  const misiones = [];
+function MisionesOffcanvas({ show, onHide, userId }) {
+  const [misiones, setMisiones] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [claimingMissionId, setClaimingMissionId] = useState(null);
 
-  let claseOffcanvas = 'offcanvas offcanvas-start offcanvas-casino';
-  if (show) {
-    claseOffcanvas = 'offcanvas offcanvas-start offcanvas-casino show';
-  }
+  const cargarMisiones = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      await missionAPI.checkProgress();
+      const response = await missionAPI.getAllMissions();
+      setMisiones(Array.isArray(response?.data) ? response.data : []);
+    } catch (error) {
+      console.warn('No se pudieron cargar misiones:', error?.message || error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
 
-  let visibilidadOffcanvas = 'hidden';
-  if (show) {
-    visibilidadOffcanvas = 'visible';
-  }
+  useEffect(() => {
+    if (!show) return;
+    cargarMisiones();
+  }, [show, cargarMisiones]);
 
-  let contenidoMisiones = (
-    <div className="text-center text-muted py-5">
-      <p>No hay misiones disponibles</p>
-      <small>Las misiones diarias se actualizarán pronto</small>
-    </div>
-  );
+  useEffect(() => {
+    const onProgressionUpdate = (event) => {
+      const payloadUserId = event?.detail?.userId;
+      if (!show) return;
+      if (String(payloadUserId) !== String(userId)) return;
+      cargarMisiones();
+    };
 
-  if (misiones.length > 0) {
-    contenidoMisiones = (
-      <div className="list-group">
-        {misiones.map((mision) => (
-          <div key={mision.id} className="list-group-item">
-            <div className="d-flex justify-content-between align-items-center mb-2">
-              <h6 className="mb-0">{mision.nombre}</h6>
-              <span className="badge bg-warning text-dark">
-                💰 {mision.recompensa} fichas
-              </span>
-            </div>
-            <div className="progress">
-              <div
-                className="progress-bar"
-                style={{ width: `${(mision.progreso / mision.total) * 100}%` }}
-              >
-                {mision.progreso}/{mision.total}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+    window.addEventListener('progression:updated', onProgressionUpdate);
+    return () => window.removeEventListener('progression:updated', onProgressionUpdate);
+  }, [show, userId, cargarMisiones]);
+
+  const reclamarRecompensa = async (missionId) => {
+    if (!missionId || claimingMissionId) return;
+    setClaimingMissionId(missionId);
+    try {
+      await missionAPI.claimReward(missionId);
+      toast.success('Recompensa reclamada correctamente');
+      await cargarMisiones();
+      window.dispatchEvent(new CustomEvent('progression:updated', {
+        detail: { userId }
+      }));
+    } catch (error) {
+      const message = error?.response?.data?.message || 'No se pudo reclamar la recompensa';
+      toast.error(message);
+      await cargarMisiones();
+    } finally {
+      setClaimingMissionId(null);
+    }
+  };
 
   return (
     <div 
-      className={claseOffcanvas}
+      className={`offcanvas offcanvas-start offcanvas-casino ${show ? 'show' : ''}`} 
       tabIndex="-1"
-      style={{ visibility: visibilidadOffcanvas }}
+      style={{ visibility: show ? 'visible' : 'hidden' }}
     >
       <div className="offcanvas-header">
         <h5 className="offcanvas-title">✅ Misiones Diarias</h5>
@@ -61,7 +72,33 @@ function MisionesOffcanvas({ show, onHide }) {
         ></button>
       </div>
       <div className="offcanvas-body">
-        {contenidoMisiones}
+        {misiones.length === 0 ? (
+          <div className="text-center text-muted py-5">
+            <p>No hay misiones disponibles</p>
+            <small>Las misiones diarias se actualizarán pronto</small>
+          </div>
+        ) : (
+          <div className="list-group">
+            {misiones.map(mision => (
+              <div key={mision.id} className="list-group-item">
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <h6 className="mb-0">{mision.nombre}</h6>
+                  <span className="badge bg-warning text-dark">
+                    💰 {mision.recompensa} fichas
+                  </span>
+                </div>
+                <div className="progress">
+                  <div 
+                    className="progress-bar" 
+                    style={{ width: `${(mision.progreso / mision.total) * 100}%` }}
+                  >
+                    {mision.progreso}/{mision.total}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

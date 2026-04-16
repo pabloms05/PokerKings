@@ -67,7 +67,6 @@ export const authService = {
     const user = sessionStorage.getItem('user');
     if (user) {
       const parsedUser = JSON.parse(user);
-      console.log('getCurrentUser - Original user:', parsedUser);
       
       // Asegurar que el usuario tenga nivel por defecto si no lo tiene
       if (!parsedUser.level) {
@@ -87,11 +86,9 @@ export const authService = {
                           parsedUser.avatar === 'default-avatar.png');
       
       if (!parsedUser.avatar || isImagePath) {
-        console.log('Normalizing avatar from', parsedUser.avatar, 'to 🎮');
         parsedUser.avatar = '🎮';
       }
       
-      console.log('getCurrentUser - Returned user:', parsedUser);
       return parsedUser;
     }
     return null;

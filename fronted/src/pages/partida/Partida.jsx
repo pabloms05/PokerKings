@@ -10,6 +10,8 @@ import './Partida.css';
 
 function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUpdateUser: alActualizarUsuario }) {
   const MAXIMO_CARACTERES_CHAT = 300;
+  const idMesa = mesa?.id;
+  const idUsuario = usuario?.id;
   const [jugadores, setJugadores] = useState([]);
   const [mostrarMenu, setMostrarMenu] = useState(false);
   const [esEspectador, setEsEspectador] = useState(false);
@@ -160,30 +162,16 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
   // Usar el hook de juego de póker (conectado con backend)
   const juegoPoker = useJuegoPoker(usuario);
 
-  const refrescarSaldoUsuario = () => {
-    if (!usuario || !usuario.id || !alActualizarUsuario) {
-      return Promise.resolve();
+  const refrescarSaldoUsuario = async () => {
+    if (!usuario?.id || !alActualizarUsuario) return;
+
+    try {
+      const response = await userAPI.getUserById(usuario.id);
+      const usuarioActualizado = { ...usuario, ...response?.data, chips: Number(response?.data?.chips ?? usuario.chips ?? 0) };
+      alActualizarUsuario(usuarioActualizado);
+    } catch (error) {
+      console.warn('No se pudo refrescar saldo de usuario:', error?.message || error);
     }
-
-    return userAPI.getUserById(usuario.id).then(
-      (respuestaUsuario) => {
-        let fichasActualizadas = Number(usuario.chips || 0);
-        if (
-          respuestaUsuario &&
-          respuestaUsuario.data &&
-          respuestaUsuario.data.chips !== undefined &&
-          respuestaUsuario.data.chips !== null
-        ) {
-          fichasActualizadas = Number(respuestaUsuario.data.chips) || 0;
-        }
-
-        const usuarioActualizado = { ...usuario, ...respuestaUsuario?.data, chips: fichasActualizadas };
-        alActualizarUsuario(usuarioActualizado);
-      },
-      (errorUsuario) => {
-        console.warn('No se pudo refrescar saldo de usuario:', errorUsuario?.message || errorUsuario);
-      }
-    );
   };
 
   // Sincronizar jugadores desde el backend
@@ -203,7 +191,9 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
   useEffect(() => {
     if (juegoPoker.lastHandResult) {
       const claveIds = (juegoPoker.lastHandResult.winnerIds || []).join(',');
-      const claveMano = `${claveIds || juegoPoker.lastHandResult.winnerId}-${juegoPoker.lastHandResult.potWon}`;
+      const misionesCount = (juegoPoker.lastHandResult.completedMissions || []).length;
+      const trofeosCount = (juegoPoker.lastHandResult.unlockedAchievements || []).length;
+      const claveMano = `${claveIds || juegoPoker.lastHandResult.winnerId}-${juegoPoker.lastHandResult.potWon}-${misionesCount}-${trofeosCount}`;
       if (claveMano !== ultimaManoMostrada) {
         const ganadores = juegoPoker.lastHandResult.winners || [];
         const yoGane = (juegoPoker.lastHandResult.winnerIds || []).includes(usuario?.id) || juegoPoker.lastHandResult.winnerId === usuario?.id;
@@ -228,6 +218,31 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
 
         const yoDespuesDeMano = (juegoPoker.players || []).find((jugador) => jugador.userId === usuario?.id);
         const eliminado = !!yoDespuesDeMano && ((Number(yoDespuesDeMano.chips) || 0) <= 0 || !!yoDespuesDeMano.isSittingOut);
+
+        const misionesCompletadas = (juegoPoker.lastHandResult.completedMissions || []).filter(
+          (mission) => String(mission.userId) === String(usuario?.id)
+        );
+        misionesCompletadas.forEach((mission) => {
+          toast.success(`Mision completada: ${mission.title} (+${Number(mission.reward) || 0} PK)`);
+        });
+
+        const trofeosDesbloqueados = (juegoPoker.lastHandResult.unlockedAchievements || []).filter(
+          (achievement) => String(achievement.userId) === String(usuario?.id)
+        );
+        trofeosDesbloqueados.forEach((achievement) => {
+          toast.success(`Trofeo desbloqueado: ${achievement.name}`);
+        });
+
+        if (misionesCompletadas.length > 0 || trofeosDesbloqueados.length > 0) {
+          window.dispatchEvent(new CustomEvent('progression:updated', {
+            detail: {
+              userId: usuario?.id,
+              completedMissions: misionesCompletadas,
+              unlockedAchievements: trofeosDesbloqueados
+            }
+          }));
+        }
+
         if (eliminado) {
           // Dar tiempo a ver resultado antes de pasar a espectador.
           const hasta = Date.now() + 3500;
@@ -248,50 +263,56 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
 
   // Inicializar el juego desde el backend
   useEffect(() => {
-    const inicializarJuego = () => {
+    const inicializarJuego = async () => {
       if (!mesa || !usuario) return;
 
       setCargando(true);
       setErrorVista(null);
 
-      console.log(`🔌 Uniendose a sala de WebSocket: table_${mesa.id}`);
-      gameSocket.joinTable(mesa.id).then(
-        () => {
-          console.log('✅ Socket unido a la sala. Procediendo con startGame...');
-        },
-        (errorSocket) => {
-          console.error('⚠️ Error al unirse a WebSocket:', errorSocket.message);
+        // ESPERAR a unirse a la sala de WebSocket de la mesa ANTES de hacer startGame
+        console.log(`🔌 Uniendose a sala de WebSocket: table_${mesa.id}`);
+        try {
+          await gameSocket.joinTable(mesa.id);
+          console.log(`✅ Socket unido a la sala. Procediendo con startGame...`);
+        } catch (socketErr) {
+          console.error('⚠️ Error al unirse a WebSocket:', socketErr.message);
+          // Continuar de todas formas, pero puede haber problemas de sync
         }
-      ).then(() => {
-        const idsJugadores = [usuario.id];
 
-        gameAPI.startGame(mesa.id, idsJugadores).then(
-          (respuestaInicio) => {
-            const datosJuego = respuestaInicio.data.game || respuestaInicio.data;
-            const idJuego = datosJuego.id;
+        // Crear lista de jugadores para el backend
+        const idsJugadores = [usuario.id]; // Comenzar con el usuario actual
+        
+        // El backend manejará agregar más jugadores si existen en la mesa
+        // Por ahora, solo enviar el usuario actual
+        
+        // Iniciar el juego en el backend
+        const response = await gameAPI.startGame(mesa.id, idsJugadores);
+        
+        // El backend devuelve response.data.game con el estado del juego
+        const datosJuego = response.data.game || response.data;
+        const idJuego = datosJuego.id;
+        
+        if (idJuego) {
+          // Guardar el ID del juego
+          juegoPoker.setGameId(idJuego);
 
-            if (idJuego) {
-              juegoPoker.setGameId(idJuego);
-              if (Array.isArray(datosJuego.players)) {
-                setJugadores(datosJuego.players);
-              }
-
-              console.log('✅ Juego iniciado/unido:', idJuego);
-              refrescarSaldoUsuario().then(() => {
-                setCargando(false);
-              });
-            } else {
-              console.error('⚠️ No se recibió ID de juego del backend', respuestaInicio.data);
-              setCargando(false);
-            }
-          },
-          (errorInicio) => {
-            console.error('❌ Error al iniciar el juego:', errorInicio);
-            setErrorVista('No se pudo iniciar el juego. Intenta de nuevo.');
-            setCargando(false);
+          // Hidratar estado local inmediatamente con jugadores
+          if (Array.isArray(datosJuego.players)) {
+            setJugadores(datosJuego.players);
           }
-        );
-      });
+          
+          // El hook usePokerGame recibirá actualizaciones de todo el estado via WebSocket
+          console.log('✅ Juego iniciado/unido:', idJuego);
+          await refrescarSaldoUsuario();
+        } else {
+          console.error('⚠️ No se recibió ID de juego del backend', response.data);
+        }
+      } catch (err) {
+        console.error('❌ Error al iniciar el juego:', err);
+        setErrorVista('No se pudo iniciar el juego. Intenta de nuevo.');
+      } finally {
+        setCargando(false);
+      }
     };
 
     // Esperar un poco antes de inicializar (para que el WebSocket esté listo)
@@ -301,11 +322,11 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
 
     return () => {
       clearTimeout(temporizador);
-      if (mesa && mesa.id) {
+      if (mesa?.id) {
         gameSocket.leaveTable(mesa.id);
       }
     };
-  }, [mesa, usuario]);
+  }, [idMesa, idUsuario]);
 
   // Manejar levantarse (modo espectador)
   const manejarLevantarse = () => {
@@ -853,6 +874,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
           sidePots={juegoPoker.sidePots}
           currentUserIndex={indiceUsuarioActual}
           currentPlayerIndex={juegoPoker.currentPlayerTurn}
+          onEmptySeatClick={manejarAbrirInvitar}
         />
 
         {/* Acciones: solo visibles cuando es tu turno */}

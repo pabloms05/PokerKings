@@ -11,6 +11,7 @@ import shopRoutes from './routes/shop.routes.js';
 import friendRoutes from './routes/friend.routes.js';
 import handRoutes from './routes/hand.routes.js';
 import missionRoutes from './routes/mission.routes.js';
+import achievementRoutes from './routes/achievement.routes.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -32,6 +33,7 @@ app.use('/api/shop', shopRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/hands', handRoutes);
 app.use('/api/missions', missionRoutes);
+app.use('/api/achievements', achievementRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -42,9 +44,21 @@ app.get('/health', (req, res) => {
 // El Dockerfile copia el build de React a /app/public
 const frontendDist = path.join(__dirname, '../public');
 if (existsSync(frontendDist)) {
-  app.use(express.static(frontendDist));
+  app.use(express.static(frontendDist, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        // Evita que proxies/navegadores sirvan un index.html antiguo tras despliegues.
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    }
+  }));
   // Fallback SPA: cualquier ruta no-API devuelve index.html
   app.get(/^(?!\/api|\/health).*/, (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
 }

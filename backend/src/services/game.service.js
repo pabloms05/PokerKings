@@ -13,6 +13,7 @@ import {
   removeFoldedPlayerFromPots
 } from './sidepots.service.js';
 import { executeBotTurn } from './bot.ai.js';
+import { processHandProgression } from './progression.service.js';
 
 // Palos de cartas
 const SUITS = ['S', 'H', 'D', 'C'];
@@ -410,6 +411,16 @@ const finishByFold = async (game) => {
   // Add the winnings to winner's chips
   winner.chips += winningsFromPots;
 
+  let progressionPayload = { unlockedAchievements: [], completedMissions: [] };
+  try {
+    progressionPayload = await processHandProgression({
+      game,
+      winners: [{ userId: winner.userId, chipsWon: winningsFromPots }]
+    });
+  } catch (progressionError) {
+    console.error('[PROGRESSION] Error processing hand progression (fold):', progressionError.message);
+  }
+
   // Actualizar jugadores con el bote distribuido y sacar de asiento a jugadores sin fichas
   game.players = normalizeBustedPlayersToSittingOut(JSON.parse(JSON.stringify(game.players)));
   game.changed('players', true);
@@ -422,6 +433,7 @@ const finishByFold = async (game) => {
       winner: { ...winner, chipsWon: winningsFromPots },
       winners: [{ userId: winner.userId, chipsWon: winningsFromPots }],
       potWon: winningsFromPots,
+      progression: progressionPayload,
       handContinues: true
     };
   }
@@ -438,6 +450,7 @@ const finishByFold = async (game) => {
     winner: { ...winner, chipsWon: winningsFromPots },
     winners: [{ userId: winner.userId, chipsWon: winningsFromPots }],
     potWon: winningsFromPots,
+    progression: progressionPayload,
     handContinues: false
   };
 };
@@ -606,6 +619,13 @@ const finishShowdown = async (game) => {
 
   console.log('[DEBUG][WINNERS] All winners:', winners.map(w => `${w.username} (${w.chipsWon} chips)`).join(', '));
 
+  let progressionPayload = { unlockedAchievements: [], completedMissions: [] };
+  try {
+    progressionPayload = await processHandProgression({ game, winners });
+  } catch (progressionError) {
+    console.error('[PROGRESSION] Error processing hand progression (showdown):', progressionError.message);
+  }
+
   // Actualizar jugadores con chips distribuidos y sacar de asiento a jugadores sin fichas
   game.players = normalizeBustedPlayersToSittingOut(distributedPlayers);
   game.changed('players', true);
@@ -618,7 +638,7 @@ const finishShowdown = async (game) => {
       potWon = sidePots.reduce((sum, pot) => sum + (pot.amount || 0), 0);
     }
     await startNextHand(game);
-    return { winner: primaryWinner, winners, potWon, handContinues: true };
+    return { winner: primaryWinner, winners, potWon, progression: progressionPayload, handContinues: true };
   }
 
   game.status = 'finished';
@@ -636,7 +656,7 @@ const finishShowdown = async (game) => {
   if (potWon === 0) {
     potWon = sidePots.reduce((sum, pot) => sum + (pot.amount || 0), 0);
   }
-  return { winner: primaryWinner, winners, potWon, handContinues: false };
+  return { winner: primaryWinner, winners, potWon, progression: progressionPayload, handContinues: false };
 };
 
 /**
@@ -900,6 +920,7 @@ export const processPlayerAction = async (game, playerId, action, amount = 0) =>
             winner: foldResult.winner,
             winners: foldResult.winners || [],
             potWon: foldResult.potWon || 0,
+            progression: foldResult.progression || { unlockedAchievements: [], completedMissions: [] },
             gameState: await getGameState(game.id, false)
           };
         }
@@ -1006,6 +1027,7 @@ export const processPlayerAction = async (game, playerId, action, amount = 0) =>
         winner: foldResult.winner,
         winners: foldResult.winners || [],
         potWon: foldResult.potWon || 0,
+        progression: foldResult.progression || { unlockedAchievements: [], completedMissions: [] },
         gameState: await getGameState(game.id, false)
       };
     }
@@ -1089,6 +1111,7 @@ export const processPlayerAction = async (game, playerId, action, amount = 0) =>
           winner: showdownResult.winner,
           winners: showdownResult.winners || [],
           potWon: showdownResult.potWon || 0,
+          progression: showdownResult.progression || { unlockedAchievements: [], completedMissions: [] },
           gameState: await getGameState(game.id, false)
         };
       }
@@ -1105,6 +1128,7 @@ export const processPlayerAction = async (game, playerId, action, amount = 0) =>
           winner: showdownResult.winner,
           winners: showdownResult.winners || [],
           potWon: showdownResult.potWon || 0,
+          progression: showdownResult.progression || { unlockedAchievements: [], completedMissions: [] },
           gameState: await getGameState(game.id, false)
         };
       }

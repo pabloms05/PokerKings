@@ -236,11 +236,14 @@ class GameSocketService {
 
   // Desuscribirse de eventos
   off(event, callback) {
-    if (this.listeners[event]) {
-      this.listeners[event] = this.listeners[event].filter(
-        (cb) => cb !== callback
-      );
+    if (!this.listeners[event]) return;
+
+    if (typeof callback !== 'function') {
+      delete this.listeners[event];
+      return;
     }
+
+    this.listeners[event] = this.listeners[event].filter((cb) => cb !== callback);
   }
 
   // Emitir eventos internos

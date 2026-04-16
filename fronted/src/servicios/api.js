@@ -191,4 +191,10 @@ export const missionAPI = {
     apiClient.post('/missions/check-progress'),
 };
 
+// ============= TROFEOS =============
+export const achievementAPI = {
+  getAllAchievements: () =>
+    apiClient.get('/achievements')
+};
+
 export default apiClient;

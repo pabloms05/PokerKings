@@ -225,12 +225,14 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
       <TrofeosOffcanvas
         show={activeOffcanvas === 'trofeos'}
         onHide={closeOffcanvas}
+        userId={user?.id}
       />
 
       {/* Offcanvas para Misiones */}
       <MisionesOffcanvas
         show={activeOffcanvas === 'misiones'}
         onHide={closeOffcanvas}
+        userId={user?.id}
       />
 
       {/* Offcanvas para Amigos */}
