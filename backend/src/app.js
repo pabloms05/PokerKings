@@ -42,9 +42,21 @@ app.get('/health', (req, res) => {
 // El Dockerfile copia el build de React a /app/public
 const frontendDist = path.join(__dirname, '../public');
 if (existsSync(frontendDist)) {
-  app.use(express.static(frontendDist));
+  app.use(express.static(frontendDist, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        // Evita que proxies/navegadores sirvan un index.html antiguo tras despliegues.
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    }
+  }));
   // Fallback SPA: cualquier ruta no-API devuelve index.html
   app.get(/^(?!\/api|\/health).*/, (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
 }

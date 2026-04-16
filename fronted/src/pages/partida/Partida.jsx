@@ -10,6 +10,8 @@ import './Partida.css';
 
 function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUpdateUser: alActualizarUsuario }) {
   const MAXIMO_CARACTERES_CHAT = 300;
+  const idMesa = mesa?.id;
+  const idUsuario = usuario?.id;
   const [jugadores, setJugadores] = useState([]);
   const [mostrarMenu, setMostrarMenu] = useState(false);
   const [esEspectador, setEsEspectador] = useState(false);
@@ -146,10 +148,10 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
   const juegoPoker = useJuegoPoker(usuario);
 
   const refrescarSaldoUsuario = async () => {
-    if (!usuario?.id || !alActualizarUsuario) return;
+    if (!idUsuario || !alActualizarUsuario) return;
 
     try {
-      const response = await userAPI.getUserById(usuario.id);
+      const response = await userAPI.getUserById(idUsuario);
       const usuarioActualizado = { ...usuario, ...response?.data, chips: Number(response?.data?.chips ?? usuario.chips ?? 0) };
       alActualizarUsuario(usuarioActualizado);
     } catch (error) {
@@ -214,16 +216,16 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
   // Inicializar el juego desde el backend
   useEffect(() => {
     const inicializarJuego = async () => {
-      if (!mesa || !usuario) return;
+      if (!idMesa || !idUsuario) return;
 
       try {
         setCargando(true);
         setErrorVista(null);
 
         // ESPERAR a unirse a la sala de WebSocket de la mesa ANTES de hacer startGame
-        console.log(`🔌 Uniendose a sala de WebSocket: table_${mesa.id}`);
+        console.log(`🔌 Uniendose a sala de WebSocket: table_${idMesa}`);
         try {
-          await gameSocket.joinTable(mesa.id);
+          await gameSocket.joinTable(idMesa);
           console.log(`✅ Socket unido a la sala. Procediendo con startGame...`);
         } catch (socketErr) {
           console.error('⚠️ Error al unirse a WebSocket:', socketErr.message);
@@ -231,13 +233,13 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
         }
 
         // Crear lista de jugadores para el backend
-        const idsJugadores = [usuario.id]; // Comenzar con el usuario actual
+        const idsJugadores = [idUsuario]; // Comenzar con el usuario actual
         
         // El backend manejará agregar más jugadores si existen en la mesa
         // Por ahora, solo enviar el usuario actual
         
         // Iniciar el juego en el backend
-        const response = await gameAPI.startGame(mesa.id, idsJugadores);
+        const response = await gameAPI.startGame(idMesa, idsJugadores);
         
         // El backend devuelve response.data.game con el estado del juego
         const datosJuego = response.data.game || response.data;
@@ -273,11 +275,11 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
 
     return () => {
       clearTimeout(temporizador);
-      if (mesa?.id) {
-        gameSocket.leaveTable(mesa.id);
+      if (idMesa) {
+        gameSocket.leaveTable(idMesa);
       }
     };
-  }, [mesa, usuario]);
+  }, [idMesa, idUsuario]);
 
   // Manejar levantarse (modo espectador)
   const manejarLevantarse = async () => {

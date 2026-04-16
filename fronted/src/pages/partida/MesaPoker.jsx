@@ -20,6 +20,19 @@ function PokerTable({
   currentUserIndex = null,
   currentPlayerIndex = null
 }) {
+  // Alias internos para mantener consistencia con el resto del componente.
+  const maxJugadores = maxPlayers;
+  const jugadores = players;
+  const faseJuego = gamePhase;
+  const cartasComunitarias = communityCards;
+  const bote = pot;
+  const botesLaterales = sidePots;
+  const posicionDealer = dealerPosition;
+  const posicionCiegaPequena = smallBlindPosition;
+  const posicionCiegaGrande = bigBlindPosition;
+  const indiceUsuarioActual = currentUserIndex;
+  const indiceTurnoActual = currentPlayerIndex;
+
   // Estado para rastrear qué cartas ya fueron reveladas
   const [cartasReveladas, setCartasReveladas] = useState([]);
 
@@ -170,10 +183,10 @@ function PokerTable({
     for (let i = 0; i < maxJugadores; i++) {
       if (i < jugadores.length) {
         // Calcular el índice original del jugador que debería estar en esta posición
-        const originalIndex = (currentUserIndex + i - offset + players.length) % players.length;
-        const originalPlayer = players[originalIndex];
-        displayedPlayers[i] = originalPlayer?.isSittingOut ? null : originalPlayer;
-        playerIndexMap[i] = originalIndex;
+        const indiceOriginal = (i - desplazamiento + jugadores.length) % jugadores.length;
+        const jugadorOriginal = jugadores[indiceOriginal];
+        jugadoresMostrados[i] = jugadorOriginal?.isSittingOut ? null : jugadorOriginal;
+        mapaIndicesJugadores[i] = indiceOriginal;
       } else {
         jugadoresMostrados[i] = null;
         mapaIndicesJugadores[i] = null;
