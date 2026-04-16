@@ -352,7 +352,7 @@ function Aplicacion() {
       
       {/* Renderizar vista actual */}
       {vistaActual === 'inicio' && (
-        <PaginaInicio onNavigate={manejarNavegacion} />
+        <PaginaInicio onNavigate={manejarNavegacion} user={usuario} />
       )}
 
       {vistaActual === 'mesas' && (
