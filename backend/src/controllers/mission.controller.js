@@ -1,55 +1,12 @@
 import { Mission, User, Transaction } from '../models/index.js';
-
-const MISSIONS = [
-  {
-    title: 'First Victory',
-    description: 'Win your first game',
-    requirement: { type: 'wins', count: 1 },
-    reward: 500,
-    type: 'permanent'
-  },
-  {
-    title: 'Chip Collector',
-    description: 'Accumulate 10,000 chips',
-    requirement: { type: 'chips', count: 10000 },
-    reward: 1000,
-    type: 'permanent'
-  },
-  {
-    title: 'Daily Player',
-    description: 'Play 5 games today',
-    requirement: { type: 'games', count: 5 },
-    reward: 250,
-    type: 'daily'
-  },
-  {
-    title: 'High Roller',
-    description: 'Win 10 games',
-    requirement: { type: 'wins', count: 10 },
-    reward: 2000,
-    type: 'permanent'
-  }
-];
+import { ensureUserMissions, refreshUserMissionProgress } from '../services/progression.service.js';
 
 export const getMissions = async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const userId = req.userId;
+    await ensureUserMissions(userId);
 
-    const missions = await Mission.findAll({
-      where: { userId }
-    });
-
-    if (missions.length === 0) {
-      // Create default missions for new user
-      for (const mission of MISSIONS) {
-        await Mission.create({
-          userId,
-          ...mission
-        });
-      }
-      const newMissions = await Mission.findAll({ where: { userId } });
-      return res.json(newMissions);
-    }
+    const missions = await Mission.findAll({ where: { userId } });
 
     res.json(missions);
   } catch (error) {
@@ -59,40 +16,13 @@ export const getMissions = async (req, res) => {
 
 export const checkMissionProgress = async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const userId = req.userId;
     const user = await User.findByPk(userId);
-
-    const missions = await Mission.findAll({
-      where: { userId, completed: false }
-    });
-
-    for (const mission of missions) {
-      let progress = 0;
-      const req_type = mission.requirement.type;
-      const req_count = mission.requirement.count;
-
-      if (req_type === 'wins') {
-        progress = user.gamesWon;
-      } else if (req_type === 'chips') {
-        progress = user.chips;
-      } else if (req_type === 'games') {
-        progress = user.gamesPlayed;
-      }
-
-      mission.progress = Math.min(progress, req_count);
-
-      if (progress >= req_count) {
-        mission.completed = true;
-        mission.completedAt = new Date();
-        await mission.save();
-      } else {
-        await mission.save();
-      }
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
 
-    const updatedMissions = await Mission.findAll({
-      where: { userId }
-    });
+    const updatedMissions = await refreshUserMissionProgress(userId);
 
     res.json(updatedMissions);
   } catch (error) {
@@ -115,6 +45,22 @@ export const claimMissionReward = async (req, res) => {
       return res.status(400).json({ message: 'Mission not completed' });
     }
 
+    const missionPeriodKey = (mission.type === 'daily' || mission.type === 'weekly')
+      ? (mission.requirement?.periodKey || 'period-unknown')
+      : 'permanent';
+    const missionRewardTag = `mission:${mission.id}:${missionPeriodKey}`;
+    const existingClaim = await Transaction.findOne({
+      where: {
+        userId,
+        type: 'bonus',
+        description: missionRewardTag
+      }
+    });
+
+    if (existingClaim) {
+      return res.status(400).json({ message: 'Mission reward already claimed' });
+    }
+
     const user = await User.findByPk(userId);
     const balanceBefore = user.chips;
 
@@ -125,7 +71,7 @@ export const claimMissionReward = async (req, res) => {
       userId,
       type: 'bonus',
       amount: mission.reward,
-      description: `Mission reward: ${mission.title}`,
+      description: missionRewardTag,
       balanceBefore,
       balanceAfter: user.chips
     });

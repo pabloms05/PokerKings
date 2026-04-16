@@ -1,8 +1,39 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { achievementAPI } from '../../servicios/api';
 
-function TrofeosOffcanvas({ show, onHide }) {
-  // Lista de trofeos (vendrá del backend)
-  const trofeos = [];
+function TrofeosOffcanvas({ show, onHide, userId }) {
+  const [trofeos, setTrofeos] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const cargarTrofeos = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      const response = await achievementAPI.getAllAchievements();
+      setTrofeos(Array.isArray(response?.data) ? response.data : []);
+    } catch (error) {
+      console.warn('No se pudieron cargar trofeos:', error?.message || error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (!show) return;
+    cargarTrofeos();
+  }, [show, cargarTrofeos]);
+
+  useEffect(() => {
+    const onProgressionUpdate = (event) => {
+      const payloadUserId = event?.detail?.userId;
+      if (!show) return;
+      if (String(payloadUserId) !== String(userId)) return;
+      cargarTrofeos();
+    };
+
+    window.addEventListener('progression:updated', onProgressionUpdate);
+    return () => window.removeEventListener('progression:updated', onProgressionUpdate);
+  }, [show, userId, cargarTrofeos]);
 
   return (
     <div 
@@ -19,7 +50,11 @@ function TrofeosOffcanvas({ show, onHide }) {
         ></button>
       </div>
       <div className="offcanvas-body">
-        {trofeos.length === 0 ? (
+        {loading ? (
+          <div className="text-center text-muted py-5">
+            <p>Cargando trofeos...</p>
+          </div>
+        ) : trofeos.length === 0 ? (
           <div className="text-center text-muted py-5">
             <p>No tienes trofeos aún</p>
             <small>Juega para desbloquear trofeos</small>
@@ -27,13 +62,10 @@ function TrofeosOffcanvas({ show, onHide }) {
         ) : (
           <div className="list-group">
             {trofeos.map(trofeo => (
-              <div 
-                key={trofeo.id} 
-                className={`list-group-item ${trofeo.desbloqueado ? 'list-group-item-success' : ''}`}
-              >
-                <h6>{trofeo.nombre}</h6>
-                <p className="mb-0 text-muted">{trofeo.descripcion}</p>
-                {trofeo.desbloqueado && <span className="badge bg-success">✓ Desbloqueado</span>}
+              <div key={trofeo.id} className="list-group-item list-group-item-success">
+                <h6>{trofeo.name}</h6>
+                <p className="mb-0 text-muted">{trofeo.description}</p>
+                <span className="badge bg-success">✓ Desbloqueado</span>
               </div>
             ))}
           </div>

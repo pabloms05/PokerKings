@@ -176,7 +176,9 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
   useEffect(() => {
     if (juegoPoker.lastHandResult) {
       const claveIds = (juegoPoker.lastHandResult.winnerIds || []).join(',');
-      const claveMano = `${claveIds || juegoPoker.lastHandResult.winnerId}-${juegoPoker.lastHandResult.potWon}`;
+      const misionesCount = (juegoPoker.lastHandResult.completedMissions || []).length;
+      const trofeosCount = (juegoPoker.lastHandResult.unlockedAchievements || []).length;
+      const claveMano = `${claveIds || juegoPoker.lastHandResult.winnerId}-${juegoPoker.lastHandResult.potWon}-${misionesCount}-${trofeosCount}`;
       if (claveMano !== ultimaManoMostrada) {
         const ganadores = juegoPoker.lastHandResult.winners || [];
         const yoGane = (juegoPoker.lastHandResult.winnerIds || []).includes(usuario?.id) || juegoPoker.lastHandResult.winnerId === usuario?.id;
@@ -195,6 +197,31 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
 
         const yoDespuesDeMano = (juegoPoker.players || []).find((jugador) => jugador.userId === usuario?.id);
         const eliminado = !!yoDespuesDeMano && ((Number(yoDespuesDeMano.chips) || 0) <= 0 || !!yoDespuesDeMano.isSittingOut);
+
+        const misionesCompletadas = (juegoPoker.lastHandResult.completedMissions || []).filter(
+          (mission) => String(mission.userId) === String(usuario?.id)
+        );
+        misionesCompletadas.forEach((mission) => {
+          toast.success(`Mision completada: ${mission.title} (+${Number(mission.reward) || 0} PK)`);
+        });
+
+        const trofeosDesbloqueados = (juegoPoker.lastHandResult.unlockedAchievements || []).filter(
+          (achievement) => String(achievement.userId) === String(usuario?.id)
+        );
+        trofeosDesbloqueados.forEach((achievement) => {
+          toast.success(`Trofeo desbloqueado: ${achievement.name}`);
+        });
+
+        if (misionesCompletadas.length > 0 || trofeosDesbloqueados.length > 0) {
+          window.dispatchEvent(new CustomEvent('progression:updated', {
+            detail: {
+              userId: usuario?.id,
+              completedMissions: misionesCompletadas,
+              unlockedAchievements: trofeosDesbloqueados
+            }
+          }));
+        }
+
         if (eliminado) {
           // Dar tiempo a ver resultado antes de pasar a espectador.
           const hasta = Date.now() + 3500;

@@ -1,8 +1,40 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { missionAPI } from '../../servicios/api';
 
-function MisionesOffcanvas({ show, onHide }) {
-  // Lista de misiones diarias (vendrá del backend)
-  const misiones = [];
+function MisionesOffcanvas({ show, onHide, userId }) {
+  const [misiones, setMisiones] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const cargarMisiones = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      await missionAPI.checkProgress();
+      const response = await missionAPI.getAllMissions();
+      setMisiones(Array.isArray(response?.data) ? response.data : []);
+    } catch (error) {
+      console.warn('No se pudieron cargar misiones:', error?.message || error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (!show) return;
+    cargarMisiones();
+  }, [show, cargarMisiones]);
+
+  useEffect(() => {
+    const onProgressionUpdate = (event) => {
+      const payloadUserId = event?.detail?.userId;
+      if (!show) return;
+      if (String(payloadUserId) !== String(userId)) return;
+      cargarMisiones();
+    };
+
+    window.addEventListener('progression:updated', onProgressionUpdate);
+    return () => window.removeEventListener('progression:updated', onProgressionUpdate);
+  }, [show, userId, cargarMisiones]);
 
   return (
     <div 
@@ -19,7 +51,11 @@ function MisionesOffcanvas({ show, onHide }) {
         ></button>
       </div>
       <div className="offcanvas-body">
-        {misiones.length === 0 ? (
+        {loading ? (
+          <div className="text-center text-muted py-5">
+            <p>Cargando misiones...</p>
+          </div>
+        ) : misiones.length === 0 ? (
           <div className="text-center text-muted py-5">
             <p>No hay misiones disponibles</p>
             <small>Las misiones diarias se actualizarán pronto</small>
@@ -29,19 +65,22 @@ function MisionesOffcanvas({ show, onHide }) {
             {misiones.map(mision => (
               <div key={mision.id} className="list-group-item">
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                  <h6 className="mb-0">{mision.nombre}</h6>
+                  <h6 className="mb-0">{mision.title}</h6>
                   <span className="badge bg-warning text-dark">
-                    💰 {mision.recompensa} fichas
+                    💰 {Number(mision.reward || 0).toLocaleString()} fichas
                   </span>
                 </div>
                 <div className="progress">
                   <div 
                     className="progress-bar" 
-                    style={{ width: `${(mision.progreso / mision.total) * 100}%` }}
+                    style={{ width: `${Math.min(100, ((Number(mision.progress || 0) / Math.max(1, Number(mision?.requirement?.count || 1))) * 100))}%` }}
                   >
-                    {mision.progreso}/{mision.total}
+                    {Number(mision.progress || 0)}/{Number(mision?.requirement?.count || 0)}
                   </div>
                 </div>
+                {mision.completed && (
+                  <div className="mt-2 text-success">✅ Completada</div>
+                )}
               </div>
             ))}
           </div>

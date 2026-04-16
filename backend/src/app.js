@@ -11,6 +11,7 @@ import shopRoutes from './routes/shop.routes.js';
 import friendRoutes from './routes/friend.routes.js';
 import handRoutes from './routes/hand.routes.js';
 import missionRoutes from './routes/mission.routes.js';
+import achievementRoutes from './routes/achievement.routes.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -32,6 +33,7 @@ app.use('/api/shop', shopRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/hands', handRoutes);
 app.use('/api/missions', missionRoutes);
+app.use('/api/achievements', achievementRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

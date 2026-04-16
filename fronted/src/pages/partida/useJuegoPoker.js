@@ -270,7 +270,9 @@ const useJuegoPoker = (usuario) => {
             winnerName: datos.winnerName || datos.winner?.username || 'Desconocido',
             winnerIds: datos.winnerIds || [],
             winners: datos.winners || [],
-            potWon: datos.potWon ?? 0
+            potWon: datos.potWon ?? 0,
+            unlockedAchievements: datos.unlockedAchievements || [],
+            completedMissions: datos.completedMissions || []
           });
           setJugadorYaActuo(false);
         }

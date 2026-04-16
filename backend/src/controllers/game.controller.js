@@ -67,6 +67,12 @@ const emitHandOverIfNeeded = async (io, tableId, gameId, result) => {
   let winnerId = result.winner?.userId || result.winner?.id || winnerIds[0] || null;
   let winnerName = 'Desconocido';
   const potWon = result.potWon ?? winners.reduce((sum, w) => sum + (w.chipsWon || 0), 0);
+  const unlockedAchievements = Array.isArray(result?.progression?.unlockedAchievements)
+    ? result.progression.unlockedAchievements
+    : [];
+  const completedMissions = Array.isArray(result?.progression?.completedMissions)
+    ? result.progression.completedMissions
+    : [];
 
   if (winners.length > 1) {
     const names = winners.map(w => w.username).filter(Boolean);
@@ -83,7 +89,9 @@ const emitHandOverIfNeeded = async (io, tableId, gameId, result) => {
     winnerName,
     winnerIds,
     winners,
-    potWon
+    potWon,
+    unlockedAchievements,
+    completedMissions
   });
 };
 
@@ -608,6 +616,12 @@ export const playerAction = async (req, res) => {
       let winnerId = result.winner?.userId || result.winner?.id || winnerIds[0] || null;
       let winnerName = 'Desconocido';
       let potWon = result.potWon ?? winners.reduce((sum, w) => sum + (w.chipsWon || 0), 0);
+      const unlockedAchievements = Array.isArray(result?.progression?.unlockedAchievements)
+        ? result.progression.unlockedAchievements
+        : [];
+      const completedMissions = Array.isArray(result?.progression?.completedMissions)
+        ? result.progression.completedMissions
+        : [];
 
       try {
         if (winners.length > 1) {
@@ -628,7 +642,9 @@ export const playerAction = async (req, res) => {
             winnerName,
             winnerIds,
             winners,
-            potWon
+            potWon,
+            unlockedAchievements,
+            completedMissions
           });
         }
       } catch (emitError) {
@@ -644,6 +660,8 @@ export const playerAction = async (req, res) => {
         winnerIds,
         winners,
         potWon,
+        unlockedAchievements,
+        completedMissions,
         gameState: result.gameState || await getGameState(gameId, false)
       });
     }
