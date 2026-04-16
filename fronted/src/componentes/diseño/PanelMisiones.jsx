@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { missionAPI } from '../../servicios/api';
+import toast from 'react-hot-toast';
 
 function MisionesOffcanvas({ show, onHide, userId }) {
   const [misiones, setMisiones] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [claimingMissionId, setClaimingMissionId] = useState(null);
 
   const cargarMisiones = useCallback(async () => {
     if (!userId) return;
@@ -35,6 +37,25 @@ function MisionesOffcanvas({ show, onHide, userId }) {
     window.addEventListener('progression:updated', onProgressionUpdate);
     return () => window.removeEventListener('progression:updated', onProgressionUpdate);
   }, [show, userId, cargarMisiones]);
+
+  const reclamarRecompensa = async (missionId) => {
+    if (!missionId || claimingMissionId) return;
+    setClaimingMissionId(missionId);
+    try {
+      await missionAPI.claimReward(missionId);
+      toast.success('Recompensa reclamada correctamente');
+      await cargarMisiones();
+      window.dispatchEvent(new CustomEvent('progression:updated', {
+        detail: { userId }
+      }));
+    } catch (error) {
+      const message = error?.response?.data?.message || 'No se pudo reclamar la recompensa';
+      toast.error(message);
+      await cargarMisiones();
+    } finally {
+      setClaimingMissionId(null);
+    }
+  };
 
   return (
     <div 
@@ -79,7 +100,21 @@ function MisionesOffcanvas({ show, onHide, userId }) {
                   </div>
                 </div>
                 {mision.completed && (
-                  <div className="mt-2 text-success">✅ Completada</div>
+                  <div className="mt-2 d-flex justify-content-between align-items-center">
+                    <span className="text-success">✅ Completada</span>
+                    {mision.claimed ? (
+                      <span className="badge bg-secondary">Recompensa reclamada</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-success"
+                        disabled={!mision.claimable || claimingMissionId === mision.id}
+                        onClick={() => reclamarRecompensa(mision.id)}
+                      >
+                        {claimingMissionId === mision.id ? 'Reclamando...' : 'Reclamar'}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             ))}
