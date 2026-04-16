@@ -97,14 +97,9 @@ function MisionesOffcanvas({ show, onHide, userId }) {
                   </div>
                 </div>
                 <p className="mb-2 text-muted small">{mision.description || 'Completa el objetivo para obtener recompensas.'}</p>
-                <div className="progress">
-                  <div 
-                    className="progress-bar" 
-                    style={{ width: `${Math.min(100, ((Number(mision.progress || 0) / Math.max(1, Number(mision?.requirement?.count || 1))) * 100))}%` }}
-                  >
-                    {Number(mision.progress || 0)}/{Number(mision?.requirement?.count || 0)}
-                  </div>
-                </div>
+                <p className="mb-1 small text-secondary">
+                  Progreso: {Number(mision.progress || 0)}/{Number(mision?.requirement?.count || 0)}
+                </p>
                 {mision.completed && (
                   <div className="mt-2 d-flex justify-content-between align-items-center">
                     <span className="text-success">✅ Completada</span>

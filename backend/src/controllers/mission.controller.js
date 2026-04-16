@@ -1,4 +1,6 @@
 import { Mission, User, Transaction } from '../models/index.js';
+import { sequelize } from '../models/index.js';
+import { Op } from 'sequelize';
 import { ensureUserMissions, refreshUserMissionProgress } from '../services/progression.service.js';
 
 const buildMissionRewardTag = (mission) => {
@@ -39,7 +41,7 @@ const enrichMissionsWithClaimStatus = async (userId, missions) => {
     where: {
       userId,
       type: 'bonus',
-      description: tags
+      description: { [Op.in]: tags }
     },
     attributes: ['description']
   });
@@ -96,59 +98,74 @@ export const claimMissionReward = async (req, res) => {
     const { missionId } = req.params;
     const userId = req.userId;
 
-    const mission = await Mission.findByPk(missionId);
+    const result = await sequelize.transaction(async (transaction) => {
+      const mission = await Mission.findByPk(missionId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
 
-    if (!mission || mission.userId !== userId) {
-      return res.status(404).json({ message: 'Mission not found' });
-    }
+      if (!mission || mission.userId !== userId) {
+        return { status: 404, body: { message: 'Mission not found' } };
+      }
 
-    if (!mission.completed) {
-      return res.status(400).json({ message: 'Mission not completed' });
-    }
+      if (!mission.completed) {
+        return { status: 400, body: { message: 'Mission not completed' } };
+      }
 
-    const missionRewardTag = buildMissionRewardTag(mission);
-    const existingClaim = await Transaction.findOne({
-      where: {
+      const missionRewardTag = buildMissionRewardTag(mission);
+      const existingClaim = await Transaction.findOne({
+        where: {
+          userId,
+          type: 'bonus',
+          description: missionRewardTag
+        },
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+
+      if (existingClaim) {
+        return { status: 400, body: { message: 'Mission reward already claimed' } };
+      }
+
+      const user = await User.findByPk(userId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+      const balanceBefore = Number(user.chips) || 0;
+      const experienceBefore = Number(user.experience) || 0;
+      const rewardExperience = getMissionExperienceReward(mission);
+
+      user.chips = balanceBefore + (Number(mission.reward) || 0);
+      const expResult = applyExperienceReward(user, rewardExperience);
+      await user.save({ transaction });
+
+      await Transaction.create({
         userId,
         type: 'bonus',
-        description: missionRewardTag
-      }
+        amount: mission.reward,
+        description: missionRewardTag,
+        balanceBefore,
+        balanceAfter: user.chips
+      }, { transaction });
+
+      return {
+        status: 200,
+        body: {
+          message: 'Reward claimed',
+          user,
+          reward: {
+            chips: Number(mission.reward) || 0,
+            experience: rewardExperience,
+            experienceBefore,
+            experienceAfter: Number(user.experience) || 0,
+            levelBefore: expResult.levelBefore,
+            levelAfter: expResult.levelAfter
+          }
+        }
+      };
     });
 
-    if (existingClaim) {
-      return res.status(400).json({ message: 'Mission reward already claimed' });
-    }
-
-    const user = await User.findByPk(userId);
-    const balanceBefore = user.chips;
-    const experienceBefore = Number(user.experience) || 0;
-    const rewardExperience = getMissionExperienceReward(mission);
-
-    user.chips += mission.reward;
-    const expResult = applyExperienceReward(user, rewardExperience);
-    await user.save();
-
-    await Transaction.create({
-      userId,
-      type: 'bonus',
-      amount: mission.reward,
-      description: missionRewardTag,
-      balanceBefore,
-      balanceAfter: user.chips
-    });
-
-    res.json({
-      message: 'Reward claimed',
-      user,
-      reward: {
-        chips: Number(mission.reward) || 0,
-        experience: rewardExperience,
-        experienceBefore,
-        experienceAfter: Number(user.experience) || 0,
-        levelBefore: expResult.levelBefore,
-        levelAfter: expResult.levelAfter
-      }
-    });
+    return res.status(result.status).json(result.body);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

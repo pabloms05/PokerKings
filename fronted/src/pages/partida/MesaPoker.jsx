@@ -286,7 +286,7 @@ function PokerTable({
     ]
   };
 
-  const posiciones = posicionesAsientos[maxPlayers] || posicionesAsientos[6];
+  const posiciones = posicionesAsientos[maxJugadores] || posicionesAsientos[6];
 
   // Reordenar jugadores para que el usuario actual siempre esté en la posición inferior (center-bottom)
   const indiceCentroInferior = maxJugadores === 6 ? 3 : (maxJugadores === 4 ? 2 : maxJugadores - 1);
@@ -294,30 +294,30 @@ function PokerTable({
   let mapaIndicesJugadores = {};
 
   // Construir array de posiciones con rotación para poner al usuario en la posición inferior
-  if (indiceUsuarioActual !== null && indiceUsuarioActual !== undefined && jugadores.length > 0 && indiceUsuarioActual >= 0) {
+  if (indiceUsuarioActualCalculado !== null && indiceUsuarioActualCalculado !== undefined && jugadores.length > 0 && indiceUsuarioActualCalculado >= 0) {
     // Calcular offset: cuántas posiciones rotar hacia la derecha para que el usuario esté en centerBottomIndex
-    const desplazamiento = (indiceCentroInferior - indiceUsuarioActual + jugadores.length) % jugadores.length;
+    const desplazamiento = (indiceCentroInferior - indiceUsuarioActualCalculado + jugadores.length) % jugadores.length;
     
     // Llenar el array de posiciones con jugadores rotados
     for (let i = 0; i < maxJugadores; i++) {
       if (i < jugadores.length) {
         // Calcular el índice original del jugador que debería estar en esta posición
-        const originalIndex = (currentUserIndex + i - offset + players.length) % players.length;
-        const originalPlayer = players[originalIndex];
-        displayedPlayers[i] = originalPlayer?.isSittingOut ? null : originalPlayer;
-        playerIndexMap[i] = originalIndex;
+        const originalIndex = (i - desplazamiento + jugadores.length) % jugadores.length;
+        const originalPlayer = jugadores[originalIndex];
+        jugadoresMostrados[i] = originalPlayer?.isSittingOut ? null : originalPlayer;
+        mapaIndicesJugadores[i] = originalIndex;
       } else {
         mapaIndicesJugadores[i] = null;
       }
     }
   } else {
     // Si no sabemos quién es el usuario actual, mostramos jugadores en orden natural.
-    for (let i = 0; i < maxPlayers; i++) {
-      if (i < players.length) {
-        if (players[i] && players[i].isSittingOut) {
+    for (let i = 0; i < maxJugadores; i++) {
+      if (i < jugadores.length) {
+        if (jugadores[i] && jugadores[i].isSittingOut) {
           jugadoresMostrados[i] = null;
         } else {
-          jugadoresMostrados[i] = players[i];
+          jugadoresMostrados[i] = jugadores[i];
         }
         mapaIndicesJugadores[i] = i;
       } else {

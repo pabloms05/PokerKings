@@ -117,7 +117,7 @@ const getMissionProgress = (mission, user) => {
 export const ensureUserMissions = async (userId, transaction = null) => {
   const existingMissions = await Mission.findAll({
     where: { userId },
-    attributes: ['id', 'title'],
+    attributes: ['id', 'title', 'description', 'reward', 'type', 'requirement'],
     transaction
   });
 
@@ -138,7 +138,10 @@ export const ensureUserMissions = async (userId, transaction = null) => {
     if (!existingMission) continue;
 
     const requirement = {
+      ...(missionDefinition.requirement || {}),
       ...(existingMission.requirement || {}),
+      type: missionDefinition?.requirement?.type,
+      count: Number(missionDefinition?.requirement?.count) || 0,
       rewardExperience: Number(existingMission?.requirement?.rewardExperience)
         || Number(missionDefinition?.requirement?.rewardExperience)
         || 0
