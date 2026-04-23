@@ -1,9 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './MesaPoker.css';
 
-// Tamaño base del diseño (en px). Todo el layout está pensado para este ancho.
-const BASE_WIDTH = 1100;
-const BASE_HEIGHT = 700;
+// Tamaños base del layout (en px).
+const BASE_DESKTOP_WIDTH = 1100;
+const BASE_DESKTOP_HEIGHT = 700;
+const BASE_MOVIL_VERTICAL_WIDTH = 760;
+const BASE_MOVIL_VERTICAL_HEIGHT = 1180;
+
+const detectarModoMovilVertical = () => {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return false;
+  }
+
+  return window.matchMedia('(max-width: 900px) and (orientation: portrait) and (pointer: coarse)').matches;
+};
 
 function PokerTable({ 
   maxPlayers = 6, 
@@ -40,12 +50,26 @@ function PokerTable({
   // Escala responsiva: mide el wrapper y escala el contenedor proporcionalmente
   const referenciaWrapper = useRef(null);
   const [escala, setEscala] = useState(1);
+  const [esMovilVertical, setEsMovilVertical] = useState(detectarModoMovilVertical);
+
+  const anchoBase = esMovilVertical ? BASE_MOVIL_VERTICAL_WIDTH : BASE_DESKTOP_WIDTH;
+  const altoBase = esMovilVertical ? BASE_MOVIL_VERTICAL_HEIGHT : BASE_DESKTOP_HEIGHT;
+
+  useEffect(() => {
+    const actualizarModo = () => {
+      setEsMovilVertical(detectarModoMovilVertical());
+    };
+
+    actualizarModo();
+    window.addEventListener('resize', actualizarModo);
+    return () => window.removeEventListener('resize', actualizarModo);
+  }, []);
 
   useEffect(() => {
     const actualizarEscala = () => {
       if (!referenciaWrapper.current) return;
       const anchoDisponible = referenciaWrapper.current.offsetWidth;
-      const nuevaEscala = Math.min(anchoDisponible / BASE_WIDTH, 1);
+      const nuevaEscala = Math.min(anchoDisponible / anchoBase, 1);
       setEscala(nuevaEscala);
     };
 
@@ -53,7 +77,7 @@ function PokerTable({
     const observador = new ResizeObserver(actualizarEscala);
     if (referenciaWrapper.current) observador.observe(referenciaWrapper.current);
     return () => observador.disconnect();
-  }, []);
+  }, [anchoBase]);
 
   // Preferimos currentUserIndex cuando llega del padre; si no, lo buscamos por id.
   const indiceUsuarioActualCalculado = currentUserIndex !== null && currentUserIndex !== undefined
@@ -259,7 +283,7 @@ function PokerTable({
   }, [gamePhase, communityCards.length, cartasReveladas]);
   
   // Posiciones de los asientos alrededor de la mesa según el número máximo
-  const posicionesAsientos = {
+  const posicionesAsientosHorizontal = {
     4: [
       { top: '0%', left: '50%', transform: 'translateX(-50%)' },       // Arriba
       { top: '50%', right: '2%', transform: 'translateY(-50%)' },      // Derecha
@@ -286,7 +310,35 @@ function PokerTable({
     ]
   };
 
-  const posiciones = posicionesAsientos[maxJugadores] || posicionesAsientos[6];
+  const posicionesAsientosVertical = {
+    4: [
+      { top: '3%', left: '50%', transform: 'translateX(-50%)' },
+      { top: '50%', right: '1%', transform: 'translateY(-50%)' },
+      { bottom: '3%', left: '50%', transform: 'translateX(-50%)' },
+      { top: '50%', left: '1%', transform: 'translateY(-50%)' }
+    ],
+    6: [
+      { top: '2%', left: '50%', transform: 'translateX(-50%)' },
+      { top: '17%', right: '4%' },
+      { bottom: '17%', right: '4%' },
+      { bottom: '2%', left: '50%', transform: 'translateX(-50%)' },
+      { bottom: '17%', left: '4%' },
+      { top: '17%', left: '4%' }
+    ],
+    8: [
+      { top: '2%', left: '50%', transform: 'translateX(-50%)' },
+      { top: '11%', right: '4%' },
+      { top: '35%', right: '0.6%', transform: 'translateY(-50%)' },
+      { bottom: '11%', right: '4%' },
+      { bottom: '11%', left: '4%' },
+      { top: '35%', left: '0.6%', transform: 'translateY(-50%)' },
+      { top: '11%', left: '4%' },
+      { bottom: '2%', left: '50%', transform: 'translateX(-50%)' }
+    ]
+  };
+
+  const mapaPosiciones = esMovilVertical ? posicionesAsientosVertical : posicionesAsientosHorizontal;
+  const posiciones = mapaPosiciones[maxJugadores] || mapaPosiciones[6];
 
   // Reordenar jugadores para que el usuario actual siempre esté en la posición inferior (center-bottom)
   const indiceCentroInferior = maxJugadores === 6 ? 3 : (maxJugadores === 4 ? 2 : maxJugadores - 1);
@@ -329,21 +381,21 @@ function PokerTable({
   return (
     <div
       ref={referenciaWrapper}
-      className="poker-table-wrapper"
+      className={`poker-table-wrapper${esMovilVertical ? ' mobile-portrait-mode' : ''}`}
       style={{
-        height: `${BASE_HEIGHT * escala}px`,
+        height: `${altoBase * escala}px`,
         '--table-color': tableColor
       }}
     >
       <div
-        className="poker-table-container"
+        className={`poker-table-container${esMovilVertical ? ' mobile-portrait-mode' : ''}`}
         style={{
           transform: `scale(${escala})`,
           transformOrigin: 'top center',
-          width: `${BASE_WIDTH}px`,
-          height: `${BASE_HEIGHT}px`,
+          width: `${anchoBase}px`,
+          height: `${altoBase}px`,
           left: '50%',
-          marginLeft: `-${BASE_WIDTH / 2}px`,
+          marginLeft: `-${anchoBase / 2}px`,
         }}
       >
       {/* Mesa de poker */}

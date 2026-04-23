@@ -294,3 +294,79 @@
     font-size: 0.9rem;
   }
 }
+
+/* Solo móvil táctil: rotar la mesa en vertical */
+@media (max-width: 768px) and (pointer: coarse) and (hover: none) {
+  .home-page {
+    overflow-x: clip;
+  }
+
+  .home-content {
+    overflow-x: clip;
+  }
+
+  .home-table-container {
+    width: 100%;
+    max-width: 100%;
+    min-height: clamp(470px, 66vh, 620px);
+    margin: 0 auto 2.2rem;
+    overflow: hidden;
+    isolation: isolate;
+    display: grid;
+    place-items: center;
+  }
+
+  .home-table-image {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: clamp(540px, 148vw, 860px);
+    height: auto;
+    max-width: none;
+    transform: translate(-50%, -50%) rotate(90deg);
+    transform-origin: center;
+  }
+
+  .home-buttons {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(50%, 198px);
+    max-width: 198px;
+    gap: 0.7rem;
+    align-items: center;
+    z-index: 2;
+  }
+
+  .home-buttons .btn-home {
+    width: 100%;
+    min-height: 78px;
+    height: 78px;
+    padding: 0 0.8rem;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    text-align: center;
+    line-height: 1;
+  }
+
+  .home-buttons .btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+
+  .home-buttons .btn-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    line-height: 1;
+    transform: translateY(1px);
+  }
+}

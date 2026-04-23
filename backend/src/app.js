@@ -18,6 +18,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const isFrontendWatchMode = String(process.env.FRONTEND_WATCH || '').toLowerCase() === 'true';
+
+if (isFrontendWatchMode) {
+  app.set('etag', false);
+}
 
 // Middlewares
 app.use(cors());
@@ -46,8 +51,8 @@ const frontendDist = path.join(__dirname, '../public');
 if (existsSync(frontendDist)) {
   app.use(express.static(frontendDist, {
     setHeaders: (res, filePath) => {
-      if (filePath.endsWith('.html')) {
-        // Evita que proxies/navegadores sirvan un index.html antiguo tras despliegues.
+      if (isFrontendWatchMode || filePath.endsWith('.html')) {
+        // En watch mode desactiva cache para ver cambios al guardar sin reiniciar contenedor.
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');

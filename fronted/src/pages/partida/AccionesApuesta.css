@@ -455,3 +455,77 @@
     width: 100%;
   }
 }
+
+@media (max-width: 900px) and (orientation: portrait) and (pointer: coarse) {
+  .betting-actions-container {
+    width: calc(100% - 0.55rem);
+    bottom: 0.3rem;
+    padding: 0.45rem 0.5rem;
+    border-width: 2px;
+    border-radius: 12px;
+  }
+
+  .waiting-turn {
+    padding: 0.5rem;
+    gap: 0.45rem;
+    font-size: 0.8rem;
+  }
+
+  .waiting-icon {
+    font-size: 1rem;
+  }
+
+  .action-buttons {
+    gap: 0.35rem;
+  }
+
+  .btn-action {
+    width: calc(50% - 0.2rem);
+    max-width: none;
+    min-width: 0;
+    padding: 0.52rem 0.3rem;
+    border-width: 2px;
+    border-radius: 10px;
+    font-size: 0.74rem;
+  }
+
+  .raise-slider-container {
+    padding: 0.75rem 0.65rem;
+    max-width: none;
+  }
+
+  .slider-header {
+    font-size: 0.92rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .slider-amount {
+    margin-bottom: 0.5rem;
+  }
+
+  .amount-value {
+    font-size: 1.15rem;
+  }
+
+  .raise-slider {
+    width: min(70vw, 320px);
+  }
+
+  .turn-timer {
+    margin-top: 0.45rem;
+  }
+
+  .timer-label {
+    font-size: 0.7rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .timer-bar {
+    height: 6px;
+  }
+
+  .timer-seconds {
+    margin-top: 0.28rem;
+    font-size: 0.82rem;
+  }
+}

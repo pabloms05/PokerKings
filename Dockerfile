@@ -38,6 +38,11 @@ COPY backend/ .
 # Copiar el frontend compilado a /app/public
 COPY --from=frontend-build /frontend/dist ./public
 
+# Copiar código y dependencias del frontend para modo watch en el mismo contenedor
+COPY --from=frontend-build /frontend /frontend
+
+RUN chmod +x /app/start-container.sh
+
 EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD ["sh", "/app/start-container.sh"]

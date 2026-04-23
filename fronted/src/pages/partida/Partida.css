@@ -977,3 +977,73 @@
     width: 100%;
   }
 }
+
+@media (max-width: 900px) and (orientation: portrait) and (pointer: coarse) {
+  .table-page {
+    padding: 0.35rem 0.5rem 0.85rem;
+    overflow-x: clip;
+  }
+
+  .table-header {
+    gap: 0.4rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .btn-back,
+  .btn-menu,
+  .btn-menu.compact {
+    min-height: 42px;
+    padding: 0.42rem 0.75rem;
+    font-size: 0.84rem;
+  }
+
+  .table-info-header {
+    width: 100%;
+  }
+
+  .table-title {
+    font-size: 1.05rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .table-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 0.28rem;
+    padding: 0.28rem;
+    border-radius: 12px;
+    overflow: visible;
+  }
+
+  .stat {
+    border-right: none;
+    border: 1px solid rgba(218, 165, 32, 0.2);
+    border-radius: 8px;
+    padding: 0.26rem 0.36rem;
+    font-size: 0.66rem;
+    text-align: center;
+  }
+
+  .menu-container {
+    width: 100%;
+    align-items: flex-end;
+  }
+
+  .table-game-area {
+    padding-bottom: 6.5rem;
+  }
+
+  .actions-panel {
+    margin-top: 0.8rem;
+  }
+
+  .table-chat-panel,
+  .table-chat-panel.compact {
+    left: 0.45rem;
+    right: 0.45rem;
+    bottom: 0.45rem;
+    width: auto;
+    height: min(68vh, 500px);
+  }
+}

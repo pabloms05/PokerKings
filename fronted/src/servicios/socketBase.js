@@ -1,14 +1,35 @@
 // Socket.IO Service - Para comunicación en tiempo real
 import io from 'socket.io-client';
 
+const esHostLocal = (valor) => {
+  const texto = String(valor || '').toLowerCase();
+  return texto.includes('localhost') || texto.includes('127.0.0.1') || texto.includes('0.0.0.0');
+};
+
 const resolveSocketUrl = () => {
-  if (import.meta.env.VITE_SOCKET_URL) {
-    return import.meta.env.VITE_SOCKET_URL;
+  const socketEnv = String(import.meta.env.VITE_SOCKET_URL || '').trim();
+
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    const origenActual = window.location.origin;
+    const hostnameActual = String(window.location.hostname || '').toLowerCase();
+
+    if (socketEnv === '/' || socketEnv === './' || socketEnv === '.') {
+      return origenActual;
+    }
+
+    if (socketEnv && esHostLocal(socketEnv) && !esHostLocal(hostnameActual)) {
+      return origenActual;
+    }
+
+    if (socketEnv) {
+      return socketEnv;
+    }
+
+    return origenActual;
   }
 
-  // In production behind reverse proxy, always use same-origin socket endpoint.
-  if (typeof window !== 'undefined' && window.location && window.location.origin) {
-    return window.location.origin;
+  if (socketEnv) {
+    return socketEnv;
   }
 
   return 'http://localhost:3000';

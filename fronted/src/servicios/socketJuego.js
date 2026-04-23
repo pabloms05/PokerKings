@@ -1,13 +1,37 @@
 // Servicio WebSocket para conectar con el backend en tiempo real
 import io from 'socket.io-client';
 
+const esHostLocal = (valor) => {
+  const texto = String(valor || '').toLowerCase();
+  return texto.includes('localhost') || texto.includes('127.0.0.1') || texto.includes('0.0.0.0');
+};
+
 const resolveSocketUrl = () => {
-  if (import.meta.env.VITE_SOCKET_URL) {
-    return import.meta.env.VITE_SOCKET_URL;
-  }
+  const socketEnv = String(import.meta.env.VITE_SOCKET_URL || '').trim();
 
   if (typeof window !== 'undefined' && window.location && window.location.origin) {
-    return window.location.origin;
+    const origenActual = window.location.origin;
+    const hostnameActual = String(window.location.hostname || '').toLowerCase();
+
+    // Si está configurado como relativo, mantenemos mismo origen.
+    if (socketEnv === '/' || socketEnv === './' || socketEnv === '.') {
+      return origenActual;
+    }
+
+    // Si viene localhost pero estamos en un dominio/dispositivo externo, usamos same-origin.
+    if (socketEnv && esHostLocal(socketEnv) && !esHostLocal(hostnameActual)) {
+      return origenActual;
+    }
+
+    if (socketEnv) {
+      return socketEnv;
+    }
+
+    return origenActual;
+  }
+
+  if (socketEnv) {
+    return socketEnv;
   }
 
   return 'http://localhost:3000';
@@ -23,27 +47,34 @@ class GameSocketService {
   }
 
   connect() {
+    // Verificar que el token existe antes de conectar
+    const token = sessionStorage.getItem('token');
+    if (!token) {
+      console.warn('⚠️ No hay token de autenticación, no se puede conectar al WebSocket');
+      return null;
+    }
+
     if (!this.socket) {
-      // FIX: Verificar que el token existe antes de conectar
-      const token = sessionStorage.getItem('token');
-      if (!token) {
-        console.warn('⚠️ No hay token de autenticación, no se puede conectar al WebSocket');
-        return;
-      }
-      
       this.socket = io(SOCKET_URL, {
         auth: {
-          token: token,
+          token,
         },
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
         reconnectionAttempts: 5,
+        timeout: 10000,
+        transports: ['websocket', 'polling']
       });
 
       this.socket.on('connect', () => {
         console.log('🔌 Conectado al servidor WebSocket');
         this.emit('socketConnected');
+      });
+
+      this.socket.on('connect_error', (error) => {
+        console.error('❌ Error de conexión WebSocket:', error?.message || error);
+        this.emit('socketError', error);
       });
 
       this.socket.on('disconnect', () => {
@@ -112,6 +143,60 @@ class GameSocketService {
         this.emit('tableChatHistory', chatPayload);
       });
     }
+
+    // Si el socket ya existe pero quedó desconectado, reintentar explícitamente.
+    this.socket.auth = { token };
+    if (!this.socket.connected) {
+      this.socket.connect();
+    }
+
+    return this.socket;
+  }
+
+  waitForConnection(timeoutMs = 12000) {
+    const socket = this.connect();
+    if (!socket) {
+      return Promise.reject(new Error('No hay token de autenticación para WebSocket'));
+    }
+
+    if (socket.connected) {
+      return Promise.resolve(socket);
+    }
+
+    return new Promise((resolve, reject) => {
+      let ultimoError = null;
+
+      const limpiar = () => {
+        clearTimeout(temporizador);
+        socket.off('connect', alConectar);
+        socket.off('connect_error', alErrorConectar);
+      };
+
+      const alConectar = () => {
+        limpiar();
+        resolve(socket);
+      };
+
+      const alErrorConectar = (error) => {
+        ultimoError = error;
+      };
+
+      const temporizador = setTimeout(() => {
+        limpiar();
+        if (ultimoError?.message) {
+          reject(new Error(`Socket no conectado (${ultimoError.message})`));
+          return;
+        }
+        reject(new Error(`Socket no se pudo conectar en ${Math.round(timeoutMs / 1000)} segundos`));
+      }, timeoutMs);
+
+      socket.on('connect', alConectar);
+      socket.on('connect_error', alErrorConectar);
+
+      if (!socket.connected) {
+        socket.connect();
+      }
+    });
   }
 
   disconnect() {
@@ -131,39 +216,31 @@ class GameSocketService {
 
   // Unirse a la sala de una mesa
   joinTable(tableId) {
-    return new Promise((resolve, reject) => {
-      // Asegurar que está conectado
-      if (!this.isConnected()) {
-        console.warn('⚠️ Socket no conectado, conectando...');
-        this.connect();
+    return this.waitForConnection(12000).then(() => new Promise((resolve, reject) => {
+      if (!this.socket) {
+        reject(new Error('Socket no inicializado'));
+        return;
       }
-      
-      // Esperar a que esté conectado
-      const checkConnection = setInterval(() => {
-        if (this.isConnected()) {
-          clearInterval(checkConnection);
-          
-          console.log(`📤 Emitiendo table:join para ${tableId}`);
-          this.socket.emit('table:join', tableId, (response) => {
-            if (response && response.success) {
-              console.log(`✅ Confirmado: unido a sala table_${tableId}`);
-              resolve(response);
-            } else {
-              console.error('❌ Error al unirse a la sala:', response);
-              reject(new Error('No se pudo unir a la sala'));
-            }
-          });
-        }
-      }, 100);
 
-      // Timeout de 5 segundos
-      setTimeout(() => {
-        clearInterval(checkConnection);
-        if (!this.isConnected()) {
-          reject(new Error('Socket no se pudo conectar en 5 segundos'));
+      console.log(`📤 Emitiendo table:join para ${tableId}`);
+
+      const timeoutAck = setTimeout(() => {
+        reject(new Error('No hubo confirmación de unión a la sala'));
+      }, 6000);
+
+      this.socket.emit('table:join', tableId, (response) => {
+        clearTimeout(timeoutAck);
+        if (response && response.success) {
+          console.log(`✅ Confirmado: unido a sala table_${tableId}`);
+          resolve(response);
+          return;
         }
-      }, 5000);
-    });
+
+        const mensaje = response?.error || 'No se pudo unir a la sala';
+        console.error('❌ Error al unirse a la sala:', response);
+        reject(new Error(mensaje));
+      });
+    }));
   }
 
   leaveTable(tableId) {

@@ -518,3 +518,163 @@
     opacity: 0.8;
   }
 }
+
+@media (max-width: 900px) and (orientation: portrait) and (pointer: coarse) {
+  .poker-table-wrapper.mobile-portrait-mode {
+    overflow-x: clip;
+  }
+
+  .poker-table-container.mobile-portrait-mode {
+    padding: 1.2rem 0.35rem 0.65rem;
+  }
+
+  .poker-table-container.mobile-portrait-mode .table-image {
+    width: 91%;
+    max-height: none;
+    transform: rotate(90deg);
+    transform-origin: center;
+  }
+
+  .poker-table-container.mobile-portrait-mode .community-cards-on-table {
+    top: 46%;
+  }
+
+  .poker-table-container.mobile-portrait-mode .cards-row-table {
+    gap: 6px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .community-card-table {
+    width: 52px;
+    height: 76px;
+    border-radius: 6px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .card-front-table,
+  .poker-table-container.mobile-portrait-mode .card-back-table {
+    border-radius: 6px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .card-back-table {
+    font-size: 2rem;
+  }
+
+  .poker-table-container.mobile-portrait-mode .card-placeholder-table {
+    font-size: 1.7rem;
+  }
+
+  .poker-table-container.mobile-portrait-mode .pot-container {
+    top: 56%;
+    gap: 0.35rem;
+  }
+
+  .poker-table-container.mobile-portrait-mode .pot-amount {
+    font-size: 0.68rem;
+    padding: 3px 13px;
+    min-width: 102px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .side-pot-mini {
+    font-size: 0.68rem;
+    padding: 3px 9px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .phase-indicator {
+    top: 63%;
+    gap: 4px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .phase-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .player-seat.occupied .player-info {
+    width: 132px;
+    padding: 5px 6px;
+    border-width: 2px;
+    border-radius: 10px;
+    gap: 2px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .player-seat.occupied .player-info:hover {
+    transform: none;
+  }
+
+  .poker-table-container.mobile-portrait-mode .position-badge {
+    width: 24px;
+    height: 24px;
+    top: -10px;
+    font-size: 0.6rem;
+    border-width: 2px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .sb-badge {
+    right: -6px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .bb-badge {
+    left: -6px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .player-header {
+    gap: 5px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .player-avatar {
+    font-size: 1.3rem;
+  }
+
+  .poker-table-container.mobile-portrait-mode .player-level {
+    font-size: 0.55rem;
+    padding: 1px 5px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .player-name {
+    font-size: 0.67rem;
+    text-align: center;
+  }
+
+  .poker-table-container.mobile-portrait-mode .player-balance {
+    justify-content: center;
+    gap: 2px;
+    border-width: 1px;
+    border-radius: 6px;
+    padding: 2px 4px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .pk-coin {
+    font-size: 0.68rem;
+  }
+
+  .poker-table-container.mobile-portrait-mode .balance-amount {
+    font-size: 0.62rem;
+  }
+
+  .poker-table-container.mobile-portrait-mode .player-cards {
+    gap: 2px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .player-card,
+  .poker-table-container.mobile-portrait-mode .player-card-revealed {
+    width: 40px;
+    height: 58px;
+    border-width: 1.5px;
+    border-radius: 4px;
+    font-size: 1.3rem;
+  }
+
+  .poker-table-container.mobile-portrait-mode .empty-seat {
+    border-radius: 10px;
+    padding: 9px 6px;
+    min-width: 108px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .empty-seat-icon {
+    font-size: 1.25rem;
+    margin-bottom: 2px;
+  }
+
+  .poker-table-container.mobile-portrait-mode .empty-seat-text {
+    font-size: 0.62rem;
+  }
+}
