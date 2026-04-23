@@ -233,6 +233,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
         show={activeOffcanvas === 'misiones'}
         onHide={closeOffcanvas}
         userId={user?.id}
+        onUserStatsUpdated={onUpdateUser}
       />
 
       {/* Offcanvas para Amigos */}

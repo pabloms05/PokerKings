@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { missionAPI } from '../../servicios/api';
 import toast from 'react-hot-toast';
 
-function MisionesOffcanvas({ show, onHide, userId }) {
+function MisionesOffcanvas({ show, onHide, userId, onUserStatsUpdated }) {
   const [misiones, setMisiones] = useState([]);
   const [loading, setLoading] = useState(false);
   const [claimingMissionId, setClaimingMissionId] = useState(null);
@@ -42,11 +42,15 @@ function MisionesOffcanvas({ show, onHide, userId }) {
     if (!missionId || claimingMissionId) return;
     setClaimingMissionId(missionId);
     try {
-      await missionAPI.claimReward(missionId);
+      const response = await missionAPI.claimReward(missionId);
+      const rewardedUser = response?.data?.user;
+      if (rewardedUser && onUserStatsUpdated) {
+        onUserStatsUpdated(rewardedUser);
+      }
       toast.success('Recompensa reclamada correctamente');
       await cargarMisiones();
       window.dispatchEvent(new CustomEvent('progression:updated', {
-        detail: { userId }
+        detail: { userId, user: rewardedUser || null, source: 'mission-claim' }
       }));
     } catch (error) {
       const message = error?.response?.data?.message || 'No se pudo reclamar la recompensa';
