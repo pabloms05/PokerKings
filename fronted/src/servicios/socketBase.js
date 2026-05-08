@@ -1,6 +1,7 @@
-// Socket.IO Service - Para comunicación en tiempo real
+// Socket.IO Service - Para comunicacion en tiempo real
 import io from 'socket.io-client';
 
+// Helpers
 const esHostLocal = (valor) => {
   const texto = String(valor || '').toLowerCase();
   return texto.includes('localhost') || texto.includes('127.0.0.1') || texto.includes('0.0.0.0');
@@ -35,10 +36,12 @@ const resolveSocketUrl = () => {
   return 'http://localhost:3000';
 };
 
+// Configuracion del socket
 const SOCKET_URL = resolveSocketUrl();
 
 let socket = null;
 
+// API publica
 export const socketService = {
   // Conectar al servidor
   connect: (token) => {

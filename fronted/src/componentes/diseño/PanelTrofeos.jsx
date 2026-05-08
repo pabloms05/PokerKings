@@ -2,9 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { achievementAPI } from '../../servicios/api';
 
 function TrofeosOffcanvas({ show, onHide, userId }) {
+  // Estado local: lista de trofeos y carga
   const [trofeos, setTrofeos] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Helpers: cargar trofeos desde el backend
   const cargarTrofeos = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
@@ -18,6 +20,7 @@ function TrofeosOffcanvas({ show, onHide, userId }) {
     }
   }, [userId]);
 
+  // Efectos: recargar al abrir y cuando cambia el progreso
   useEffect(() => {
     if (!show) return;
     cargarTrofeos();
@@ -35,6 +38,7 @@ function TrofeosOffcanvas({ show, onHide, userId }) {
     return () => window.removeEventListener('progression:updated', onProgressionUpdate);
   }, [show, userId, cargarTrofeos]);
 
+  // Render del offcanvas de trofeos
   return (
     <div
       className={`offcanvas offcanvas-start offcanvas-casino ${show ? 'show' : ''}`}

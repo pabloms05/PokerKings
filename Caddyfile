@@ -1,0 +1,4 @@
+pokerkings.duckdns.org {
+    encode gzip
+    reverse_proxy app:3000
+}

@@ -13,7 +13,7 @@ start_frontend_watch() {
     echo "[app] Instalando dependencias del frontend (primera ejecucion)..."
     npm ci
   fi
-  npm run build -- --watch &
+  node /frontend/node_modules/vite/bin/vite.js build --watch &
   FRONTEND_WATCH_PID=$!
   cd /app
 }
@@ -24,9 +24,18 @@ cleanup() {
   fi
 }
 
+start_backend() {
+  if [ "${BACKEND_WATCH:-false}" = "true" ]; then
+    echo "[app] BACKEND_WATCH=true -> iniciando node --watch"
+    exec node --watch src/server.js
+  fi
+
+  exec npm start
+}
+
 if [ "${FRONTEND_WATCH:-false}" = "true" ]; then
   start_frontend_watch
   trap cleanup INT TERM EXIT
 fi
 
-exec npm start
+start_backend

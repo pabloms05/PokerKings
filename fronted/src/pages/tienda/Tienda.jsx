@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import './Tienda.css';
 
+// Constantes: catalogo fijo de paquetes
 const PAQUETES = [
   {
     id: 1,
@@ -60,8 +61,10 @@ const PAQUETES = [
 ];
 
 function PaginaTienda({ usuario, alNavegar, alActualizarUsuario }) {
+  // Estado local: paquete en compra
   const [paqueteEnCompra, setPaqueteEnCompra] = useState(null);
 
+  // Handlers: simula compra y actualiza saldo
   const manejarComprar = (paquete) => {
     setPaqueteEnCompra(paquete.id);
 
@@ -81,6 +84,7 @@ function PaginaTienda({ usuario, alNavegar, alActualizarUsuario }) {
     }, 1200);
   };
 
+  // Render de la tienda de fichas
   return (
     <div className="tienda-page">
       {/* Header */}

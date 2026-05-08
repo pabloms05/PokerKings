@@ -1,9 +1,10 @@
 // API Service - Wrapper para todas las peticiones HTTP
 import axios from 'axios';
 
+// Constantes
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
-// Crear instancia de axios
+// Cliente HTTP
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -11,7 +12,8 @@ const apiClient = axios.create({
   },
 });
 
-// Interceptor para agregar token a cada petición
+// Interceptores
+// Agregar token a cada peticion
 apiClient.interceptors.request.use(
   (config) => {
     const token = sessionStorage.getItem('token');
@@ -23,7 +25,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor para manejar errores
+// Manejar errores globales (ej: token expirado)
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -39,6 +41,7 @@ apiClient.interceptors.response.use(
   }
 );
 
+// APIs
 // ============= AUTENTICACIÓN =============
 export const authAPI = {
   register: (username, email, password, avatar) =>

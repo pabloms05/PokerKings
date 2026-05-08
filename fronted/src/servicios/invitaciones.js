@@ -1,6 +1,8 @@
+// Constantes
 const STORAGE_KEY = 'game_invitations';
 const UPDATE_EVENT = 'invitaciones:updated';
 
+// Helpers de storage
 const readInvitations = () => {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
@@ -16,6 +18,7 @@ const writeInvitations = (items) => {
   window.dispatchEvent(new CustomEvent(UPDATE_EVENT));
 };
 
+// API publica
 export const getGameInvitations = () => readInvitations();
 
 export const addGameInvitation = (invite) => {

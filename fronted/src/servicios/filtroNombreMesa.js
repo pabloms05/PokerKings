@@ -1,3 +1,4 @@
+// Constantes
 const BLOCKED_WORDS = [
   'sexo',
   'sexual',
@@ -81,6 +82,7 @@ const BLOCKED_COMPACT_TERMS = [
   'chingatumadre'
 ];
 
+// Helpers de normalizacion
 const normalizeText = (value) => String(value || '')
   .toLowerCase()
   .normalize('NFD')
@@ -107,6 +109,7 @@ const hasBlockedCompactTerm = (text) => {
   return BLOCKED_COMPACT_TERMS.some((term) => compact.includes(normalizeText(term)));
 };
 
+// Validacion
 export const validateTableName = (tableName) => {
   const rawTrimmed = String(tableName || '').trim();
   const normalized = normalizeText(tableName);

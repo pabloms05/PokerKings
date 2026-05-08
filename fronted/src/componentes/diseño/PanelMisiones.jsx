@@ -3,10 +3,12 @@ import { missionAPI } from '../../servicios/api';
 import toast from 'react-hot-toast';
 
 function MisionesOffcanvas({ show, onHide, userId, onUserStatsUpdated }) {
+  // Estado local: misiones, carga y reclamo en curso
   const [misiones, setMisiones] = useState([]);
   const [loading, setLoading] = useState(false);
   const [claimingMissionId, setClaimingMissionId] = useState(null);
 
+  // Helpers: cargar misiones y progreso desde el backend
   const cargarMisiones = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
@@ -21,6 +23,7 @@ function MisionesOffcanvas({ show, onHide, userId, onUserStatsUpdated }) {
     }
   }, [userId]);
 
+  // Efectos: recargar misiones al abrir y al actualizar progreso
   useEffect(() => {
     if (!show) return;
     cargarMisiones();
@@ -38,6 +41,7 @@ function MisionesOffcanvas({ show, onHide, userId, onUserStatsUpdated }) {
     return () => window.removeEventListener('progression:updated', onProgressionUpdate);
   }, [show, userId, cargarMisiones]);
 
+  // Handlers: reclamar recompensa y notificar progreso
   const reclamarRecompensa = async (missionId) => {
     if (!missionId || claimingMissionId) return;
     setClaimingMissionId(missionId);
@@ -61,6 +65,7 @@ function MisionesOffcanvas({ show, onHide, userId, onUserStatsUpdated }) {
     }
   };
 
+  // Render del offcanvas de misiones
   return (
     <div 
       className={`offcanvas offcanvas-start offcanvas-casino ${show ? 'show' : ''}`} 

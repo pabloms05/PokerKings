@@ -4,6 +4,7 @@ import SelectorAvatar from './SelectorAvatar';
 import './Registro.css';
 
 function Registro({ alRegistroExitoso, alCambiarALogin }) {
+  // Estado del formulario, carga y errores
   const [datosFormulario, setDatosFormulario] = useState({
     nombreUsuario: '',
     correo: '',
@@ -15,6 +16,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
   const [errorRegistro, setErrorRegistro] = useState('');
   const [erroresCampos, setErroresCampos] = useState({});
 
+  // Handlers: cambios de inputs y envio del registro
   const manejarCambio = (evento) => {
     const { name, value } = evento.target;
     setDatosFormulario({
@@ -22,7 +24,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
       [name]: value
     });
 
-    // Limpiar error general y de campo cuando el usuario corrige inputs.
+    // Limpia errores cuando el usuario corrige datos.
     if (errorRegistro) setErrorRegistro('');
     if (erroresCampos[name]) {
       setErroresCampos((previo) => ({ ...previo, [name]: undefined }));
@@ -84,6 +86,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
     });
   };
 
+  // Valores derivados: texto del boton segun estado
   let contenidoBotonRegistro = '✨ Crear Cuenta';
   if (cargando) {
     contenidoBotonRegistro = (
@@ -94,6 +97,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
     );
   }
 
+  // Render del formulario de registro
   return (
     <div className="register-container">
       <div className="register-card">

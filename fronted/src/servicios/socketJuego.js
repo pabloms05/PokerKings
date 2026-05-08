@@ -1,6 +1,7 @@
 // Servicio WebSocket para conectar con el backend en tiempo real
 import io from 'socket.io-client';
 
+// Helpers
 const esHostLocal = (valor) => {
   const texto = String(valor || '').toLowerCase();
   return texto.includes('localhost') || texto.includes('127.0.0.1') || texto.includes('0.0.0.0');
@@ -37,8 +38,10 @@ const resolveSocketUrl = () => {
   return 'http://localhost:3000';
 };
 
+// Configuracion del socket
 const SOCKET_URL = resolveSocketUrl();
 
+// Servicio principal
 class GameSocketService {
   constructor() {
     this.socket = null;
@@ -46,6 +49,7 @@ class GameSocketService {
     this.listeners = {};
   }
 
+  // Conexion base
   connect() {
     // Verificar que el token existe antes de conectar
     const token = sessionStorage.getItem('token');
@@ -153,6 +157,7 @@ class GameSocketService {
     return this.socket;
   }
 
+  // Helpers de conexion
   waitForConnection(timeoutMs = 12000) {
     const socket = this.connect();
     if (!socket) {
@@ -199,6 +204,7 @@ class GameSocketService {
     });
   }
 
+  // Control de conexion
   disconnect() {
     if (this.socket) {
       this.socket.disconnect();
@@ -206,6 +212,7 @@ class GameSocketService {
     }
   }
 
+  // Flujo de partida
   // Unirse a una partida
   joinGame(gameId, userId) {
     this.gameId = gameId;
@@ -214,6 +221,7 @@ class GameSocketService {
     }
   }
 
+  // Mesa
   // Unirse a la sala de una mesa
   joinTable(tableId) {
     return this.waitForConnection(12000).then(() => new Promise((resolve, reject) => {
@@ -249,6 +257,7 @@ class GameSocketService {
     }
   }
 
+  // Chat
   requestTableChatHistory(tableId) {
     if (this.socket && tableId) {
       this.socket.emit('table:chat:history', { tableId });
@@ -277,6 +286,7 @@ class GameSocketService {
     });
   }
 
+  // Juego y acciones
   // Salir de una partida
   leaveGame(gameId, userId) {
     if (this.socket) {
@@ -303,6 +313,7 @@ class GameSocketService {
     }
   }
 
+  // Eventos internos
   // Suscribirse a eventos
   on(event, callback) {
     if (!this.listeners[event]) {
@@ -330,10 +341,12 @@ class GameSocketService {
     }
   }
 
+  // Estado del socket
   // Verificar si está conectado
   isConnected() {
     return this.socket && this.socket.connected;
   }
 }
 
+// Instancia compartida
 export const gameSocket = new GameSocketService();

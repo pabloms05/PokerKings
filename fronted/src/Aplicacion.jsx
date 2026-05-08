@@ -17,6 +17,7 @@ import { addGameInvitation, removeGameInvitation } from './servicios/invitacione
 import { validateTableName } from './servicios/filtroNombreMesa'
 
 function Aplicacion() {
+  // Estado principal de la app: usuario autenticado, vista activa y mesa seleccionada
   const [usuario, setUsuario] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [mostrarRegistro, setMostrarRegistro] = useState(false)
@@ -31,7 +32,7 @@ function Aplicacion() {
     return JSON.parse(textoMesaGuardada)
   })
 
-  // Cargar datos al iniciar
+  // Carga inicial del perfil desde backend y sincroniza sessionStorage
   useEffect(() => {
     const cargarDatos = () => {
       setCargando(true)
@@ -59,18 +60,18 @@ function Aplicacion() {
     cargarDatos()
   }, [])
 
-  // Función cuando el inicio de sesión es exitoso
+  // Handler: guarda usuario en estado tras login para habilitar navegacion
   const manejarInicioSesionExitoso = (usuarioLogueado) => {
     setUsuario(usuarioLogueado)
   }
 
-  // Función cuando el registro es exitoso
+  // Handler: guarda usuario en estado y vuelve a login al completar registro
   const manejarRegistroExitoso = (usuarioRegistrado) => {
     setUsuario(usuarioRegistrado)
     setMostrarRegistro(false)
   }
 
-  // Función para cerrar sesión
+  // Handler: cerrar sesion, limpiar navegacion local y resetear vista/mesa
   const manejarCerrarSesion = () => {
     authService.logout()
     sessionStorage.removeItem('nav_view')
@@ -80,7 +81,7 @@ function Aplicacion() {
     setMesaActual(null)
   }
 
-  // Logout automático cuando el token expira (401)
+  // Listener global: escucha auth:unauthorized y fuerza logout seguro
   useEffect(() => {
     const onUnauthorized = () => {
       authService.logout()
@@ -94,7 +95,7 @@ function Aplicacion() {
     return () => window.removeEventListener('auth:unauthorized', onUnauthorized)
   }, []) // setters de useState son estables, no necesitan deps
 
-  // Función para actualizar usuario
+  // Handler: actualiza estado local y persiste avatar/chips en backend
   const manejarActualizarUsuario = (usuarioActualizado) => {
     setUsuario(usuarioActualizado)
     sessionStorage.setItem('user', JSON.stringify(usuarioActualizado))
@@ -110,7 +111,7 @@ function Aplicacion() {
     )
   }
 
-  // Navegación entre vistas
+  // Handler: navega entre vistas y persiste nav_view para refrescos
   const manejarNavegacion = (vista) => {
     sessionStorage.setItem('nav_view', vista)
     if (vista !== 'partida') {
@@ -120,7 +121,7 @@ function Aplicacion() {
     setVistaActual(vista)
   }
 
-  // Notificaciones de invitación a partida en tiempo real
+  // Listener: recibe invitaciones realtime y muestra toast con accion de unirse
   useEffect(() => {
     if (!usuario || !usuario.id) return;
 
@@ -195,7 +196,7 @@ function Aplicacion() {
     return () => socketService.offGameInvitation(manejarInvitacionPartida)
   }, [usuario?.id])
 
-  // Permitir navegar a una mesa al aceptar invitación desde el panel de invitaciones.
+  // Listener: navega a mesa cuando el panel confirma invitacion
   useEffect(() => {
     const onNavigateToInvitationTable = (event) => {
       const mesa = event?.detail?.table
@@ -211,7 +212,7 @@ function Aplicacion() {
     return () => window.removeEventListener('invitacion:abrir-mesa', onNavigateToInvitationTable)
   }, [])
 
-  // Unirse a mesa
+  // Handler: une a mesa, guarda sessionStorage y cambia a partida
   const manejarUnirseMesa = (mesa, tokenInvitacion = null) => {
     console.log('Unirse a mesa:', mesa)
     return tableAPI.joinTable(mesa.id, tokenInvitacion).then(
@@ -230,7 +231,7 @@ function Aplicacion() {
     )
   }
 
-  // Crear mesa
+  // Handler: valida nombre, crea mesa y navega a partida
   const manejarCrearMesa = (datosFormulario) => {
     console.log('Creando mesa:', datosFormulario)
     const validacionNombre = validateTableName(datosFormulario.tableName)
@@ -291,7 +292,7 @@ function Aplicacion() {
     )
   }
 
-  // Si no hay usuario, mostrar inicio de sesión o registro
+  // Render temprano: login/registro si no hay usuario autenticado
   if (!usuario) {
     let contenidoAcceso = (
       <InicioSesion
@@ -316,7 +317,7 @@ function Aplicacion() {
     )
   }
 
-  // Si hay usuario, mostrar la aplicación principal
+  // Render principal: navbar y pagina segun vista actual
   return (
     <div className="App">
       <Toaster 
@@ -350,7 +351,7 @@ function Aplicacion() {
       
       <Navbar user={usuario} onLogout={manejarCerrarSesion} onUpdateUser={manejarActualizarUsuario} onNavigate={manejarNavegacion} />
       
-      {/* Renderizar vista actual */}
+      {/* Render de la vista actual segun navegacion */}
       {vistaActual === 'inicio' && (
         <PaginaInicio onNavigate={manejarNavegacion} user={usuario} />
       )}

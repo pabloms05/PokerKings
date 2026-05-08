@@ -3,11 +3,13 @@ import { authService } from '../../servicios/autenticacion';
 import './InicioSesion.css';
 
 function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
+  // Estado del formulario, carga y errores
   const [identificador, setIdentificador] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [cargando, setCargando] = useState(false);
   const [errorInicio, setErrorInicio] = useState('');
 
+  // Handlers: login y cambios de input
   const iniciarSesion = (identificadorLogin, contrasenaLogin, alFinalizar) => {
     authService.login(identificadorLogin, contrasenaLogin).then(
       (resultado) => {
@@ -41,7 +43,7 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
     });
   };
 
-  // Login rápido para pruebas
+  // Acceso rapido para pruebas con usuarios predefinidos
   const manejarLoginRapido = (numeroUsuario) => {
     setErrorInicio('');
     setCargando(true);
@@ -60,6 +62,7 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
     setContrasena(eventoContrasena.target.value);
   };
 
+  // Valores derivados: contenido del boton segun estado
   let contenidoBoton = (
     <>
       <span>🎮</span>
@@ -76,6 +79,7 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
     );
   }
 
+  // Render de login, errores y accesos rapidos
   return (
     <div className="login-container">
       <div className="login-card">

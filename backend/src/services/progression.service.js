@@ -267,7 +267,14 @@ const unlockAchievementsForUser = async (user, transaction) => {
 };
 
 export const processHandProgression = async ({ game, winners = [] }) => {
-  const participants = (game?.players || []).filter((player) => !!player?.userId);
+  const participants = (game?.players || []).filter((player) => {
+    if (!player?.userId) return false;
+    if (player?.isSittingOut) return false;
+
+    // Solo cuentan jugadores que recibieron mano en esta ronda.
+    const cards = Array.isArray(player?.hand) ? player.hand : [];
+    return cards.length === 2;
+  });
   if (participants.length === 0) {
     return { unlockedAchievements: [], completedMissions: [] };
   }

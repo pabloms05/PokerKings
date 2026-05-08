@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './MesaPoker.css';
 
-// Tamaños base del layout (en px).
+// Constantes: tamanos base del layout (en px)
 const BASE_DESKTOP_WIDTH = 1100;
 const BASE_DESKTOP_HEIGHT = 700;
 const BASE_MOVIL_VERTICAL_WIDTH = 760;
 const BASE_MOVIL_VERTICAL_HEIGHT = 1180;
 
+// Helper: detecta modo movil vertical para ajustar layout
 const detectarModoMovilVertical = () => {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
     return false;
@@ -31,7 +32,7 @@ function PokerTable({
   currentPlayerIndex = null,
   onEmptySeatClick = null
 }) {
-  // Alias internos para mantener consistencia con el resto del componente.
+  // Alias de props para usar nombres consistentes en todo el componente
   const maxJugadores = maxPlayers;
   const jugadores = players;
   const faseJuego = gamePhase;
@@ -44,7 +45,8 @@ function PokerTable({
   const indiceUsuarioActual = currentUserIndex;
   const indiceTurnoActual = currentPlayerIndex;
 
-  // Estado para rastrear qué cartas ya fueron reveladas
+  // Estado y refs para animaciones y escalado responsivo
+  // Estado para rastrear que cartas ya fueron reveladas
   const [cartasReveladas, setCartasReveladas] = useState([]);
 
   // Escala responsiva: mide el wrapper y escala el contenedor proporcionalmente
@@ -52,9 +54,11 @@ function PokerTable({
   const [escala, setEscala] = useState(1);
   const [esMovilVertical, setEsMovilVertical] = useState(detectarModoMovilVertical);
 
+  // Valores derivados: dimensiones base segun orientacion
   const anchoBase = esMovilVertical ? BASE_MOVIL_VERTICAL_WIDTH : BASE_DESKTOP_WIDTH;
   const altoBase = esMovilVertical ? BASE_MOVIL_VERTICAL_HEIGHT : BASE_DESKTOP_HEIGHT;
 
+  // Efectos: detectar modo y recalcular escala
   useEffect(() => {
     const actualizarModo = () => {
       setEsMovilVertical(detectarModoMovilVertical());
@@ -79,6 +83,7 @@ function PokerTable({
     return () => observador.disconnect();
   }, [anchoBase]);
 
+  // Valores derivados: indice del usuario actual en la mesa
   // Preferimos currentUserIndex cuando llega del padre; si no, lo buscamos por id.
   const indiceUsuarioActualCalculado = currentUserIndex !== null && currentUserIndex !== undefined
     ? currentUserIndex
@@ -87,11 +92,12 @@ function PokerTable({
       return String(idJugador) === String(currentPlayerId);
     });
   
-  // Guardar datos de la ronda anterior para animar solo cuando hay cambios reales.
+  // Refs para detectar cambios reales en fase y cartas
   const referenciaFaseAnterior = useRef(gamePhase);
   const referenciaCantidadCartasAnterior = useRef(communityCards.length);
   
-  // Obtener ruta de imagen de carta (e.g., "AS" → "/assets/images/AS.png")
+  // Helpers: cartas, avatares y estados visuales
+  // Obtener ruta de imagen de carta (e.g., "AS" -> "/assets/images/AS.png")
   const obtenerImagenCarta = (carta) => {
     if (!carta || carta.length < 2) return null;
     
@@ -223,7 +229,7 @@ function PokerTable({
     );
   };
 
-  // Determinar qué cartas mostrar según fase del juego
+  // Helpers: determinar cartas comunitarias segun fase del juego
   const obtenerCartasVisibles = () => {
     switch (gamePhase) {
       case 'pre-flop':
@@ -244,7 +250,7 @@ function PokerTable({
   const cartasVisibles = obtenerCartasVisibles();
   const espaciosVacios = 5 - cartasVisibles.length;
 
-  // Efecto para revelar cartas nuevas con delay
+  // Efectos: revelar cartas nuevas con delay cuando cambia la fase
   useEffect(() => {
     const cambioFase = referenciaFaseAnterior.current !== gamePhase;
     const cambioCartas = referenciaCantidadCartasAnterior.current !== communityCards.length;
@@ -282,7 +288,8 @@ function PokerTable({
     referenciaCantidadCartasAnterior.current = communityCards.length;
   }, [gamePhase, communityCards.length, cartasReveladas]);
   
-  // Posiciones de los asientos alrededor de la mesa según el número máximo
+  // Layout de asientos segun cantidad de jugadores y orientacion
+  // Posiciones de los asientos alrededor de la mesa segun el numero maximo
   const posicionesAsientosHorizontal = {
     4: [
       { top: '0%', left: '50%', transform: 'translateX(-50%)' },       // Arriba
@@ -312,48 +319,49 @@ function PokerTable({
 
   const posicionesAsientosVertical = {
     4: [
-      { top: '3%', left: '50%', transform: 'translateX(-50%)' },
-      { top: '50%', right: '1%', transform: 'translateY(-50%)' },
-      { bottom: '3%', left: '50%', transform: 'translateX(-50%)' },
-      { top: '50%', left: '1%', transform: 'translateY(-50%)' }
+      { top: '2%', left: '50%', transform: 'translateX(-50%)' },
+      { top: '50%', right: '0.8%', transform: 'translateY(-50%)' },
+      { bottom: '2%', left: '50%', transform: 'translateX(-50%)' },
+      { top: '50%', left: '0.8%', transform: 'translateY(-50%)' }
     ],
     6: [
-      { top: '2%', left: '50%', transform: 'translateX(-50%)' },
-      { top: '17%', right: '4%' },
-      { bottom: '17%', right: '4%' },
-      { bottom: '2%', left: '50%', transform: 'translateX(-50%)' },
-      { bottom: '17%', left: '4%' },
-      { top: '17%', left: '4%' }
+      { top: '1.5%', left: '50%', transform: 'translateX(-50%)' },
+      { top: '14%', right: '3%' },
+      { bottom: '14%', right: '3%' },
+      { bottom: '1.5%', left: '50%', transform: 'translateX(-50%)' },
+      { bottom: '14%', left: '3%' },
+      { top: '14%', left: '3%' }
     ],
     8: [
-      { top: '2%', left: '50%', transform: 'translateX(-50%)' },
-      { top: '11%', right: '4%' },
-      { top: '35%', right: '0.6%', transform: 'translateY(-50%)' },
-      { bottom: '11%', right: '4%' },
-      { bottom: '11%', left: '4%' },
-      { top: '35%', left: '0.6%', transform: 'translateY(-50%)' },
-      { top: '11%', left: '4%' },
-      { bottom: '2%', left: '50%', transform: 'translateX(-50%)' }
+      { top: '1.5%', left: '50%', transform: 'translateX(-50%)' },
+      { top: '9%', right: '3%' },
+      { top: '33%', right: '0.5%', transform: 'translateY(-50%)' },
+      { bottom: '9%', right: '3%' },
+      { bottom: '9%', left: '3%' },
+      { top: '33%', left: '0.5%', transform: 'translateY(-50%)' },
+      { top: '9%', left: '3%' },
+      { bottom: '1.5%', left: '50%', transform: 'translateX(-50%)' }
     ]
   };
 
   const mapaPosiciones = esMovilVertical ? posicionesAsientosVertical : posicionesAsientosHorizontal;
   const posiciones = mapaPosiciones[maxJugadores] || mapaPosiciones[6];
 
-  // Reordenar jugadores para que el usuario actual siempre esté en la posición inferior (center-bottom)
+  // Valores derivados: rotacion de jugadores
+  // Reordenar jugadores para que el usuario actual siempre este abajo
   const indiceCentroInferior = maxJugadores === 6 ? 3 : (maxJugadores === 4 ? 2 : maxJugadores - 1);
   let jugadoresMostrados = [];
   let mapaIndicesJugadores = {};
 
   // Construir array de posiciones con rotación para poner al usuario en la posición inferior
   if (indiceUsuarioActualCalculado !== null && indiceUsuarioActualCalculado !== undefined && jugadores.length > 0 && indiceUsuarioActualCalculado >= 0) {
-    // Calcular offset: cuántas posiciones rotar hacia la derecha para que el usuario esté en centerBottomIndex
+    // Calcular offset: posiciones a rotar para que el usuario quede abajo
     const desplazamiento = (indiceCentroInferior - indiceUsuarioActualCalculado + jugadores.length) % jugadores.length;
     
     // Llenar el array de posiciones con jugadores rotados
     for (let i = 0; i < maxJugadores; i++) {
       if (i < jugadores.length) {
-        // Calcular el índice original del jugador que debería estar en esta posición
+        // Calcular el indice original del jugador en esta posicion
         const originalIndex = (i - desplazamiento + jugadores.length) % jugadores.length;
         const originalPlayer = jugadores[originalIndex];
         jugadoresMostrados[i] = originalPlayer?.isSittingOut ? null : originalPlayer;
@@ -363,7 +371,7 @@ function PokerTable({
       }
     }
   } else {
-    // Si no sabemos quién es el usuario actual, mostramos jugadores en orden natural.
+    // Si no sabemos quien es el usuario actual, mostramos jugadores en orden natural.
     for (let i = 0; i < maxJugadores; i++) {
       if (i < jugadores.length) {
         if (jugadores[i] && jugadores[i].isSittingOut) {
@@ -378,6 +386,7 @@ function PokerTable({
     }
   }
 
+  // Render
   return (
     <div
       ref={referenciaWrapper}

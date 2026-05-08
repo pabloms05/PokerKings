@@ -2,6 +2,7 @@
 import { authAPI } from './api';
 import { socketService } from './socketBase';
 
+// Servicio principal
 export const authService = {
   // Registrarse
   register: async (username, email, password, avatar = '🎮') => {
@@ -62,6 +63,7 @@ export const authService = {
     }
   },
 
+  // Sesion local
   // Obtener usuario actual
   getCurrentUser: () => {
     const user = sessionStorage.getItem('user');
@@ -109,6 +111,7 @@ export const authService = {
     socketService.disconnect();
   },
 
+  // Perfil remoto
   // Obtener perfil actual del servidor
   getProfile: async () => {
     try {
@@ -127,6 +130,7 @@ export const authService = {
     }
   },
 
+  // Sesion remota
   // Renovar token (si el servidor lo requiere)
   refreshToken: async () => {
     try {

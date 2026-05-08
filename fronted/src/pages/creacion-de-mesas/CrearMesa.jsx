@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './CrearMesa.css';
 
 function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
+  // Estado del formulario de creacion de mesa
   const [datosFormulario, setDatosFormulario] = useState({
     nombreMesa: '',
     maximoJugadores: 6,
@@ -11,6 +12,20 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
     esPrivada: true
   });
 
+  // Valores derivados para etiquetas y texto de ayuda
+  const iconoTipoMesa = datosFormulario.esPrivada ? '🔒' : '🔓';
+  const textoTipoMesa = datosFormulario.esPrivada ? 'Privada' : 'Pública';
+  const textoAyudaTipo = datosFormulario.esPrivada
+    ? 'Solo jugadores invitados pueden unirse'
+    : 'Cualquiera puede unirse desde el lobby';
+  const sufijoBots = datosFormulario.bots === 1 ? '' : 's';
+
+  // Helpers: clase activa para botones de opciones
+  const obtenerClaseBotonOpcion = (esActivo) => (
+    esActivo ? 'btn-option active' : 'btn-option'
+  );
+
+  // Handlers: cambios de inputs y envio del formulario
   const manejarCambio = (evento) => {
     const { name, value } = evento.target;
 
@@ -25,43 +40,21 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
     }));
   };
 
-  const obtenerClaseBotonOpcion = (esActivo) => {
-    let clase = 'btn-option';
-    if (esActivo) {
-      clase = 'btn-option active';
-    }
-    return clase;
-  };
-
-  let iconoTipoMesa = '🔓';
-  let textoTipoMesa = 'Pública';
-  let textoAyudaTipo = 'Cualquiera puede unirse desde el lobby';
-
-  if (datosFormulario.esPrivada) {
-    iconoTipoMesa = '🔒';
-    textoTipoMesa = 'Privada';
-    textoAyudaTipo = 'Solo jugadores invitados pueden unirse';
-  }
-
-  let sufijoBots = 's';
-  if (datosFormulario.bots === 1) {
-    sufijoBots = '';
-  }
-
   const manejarEnvio = (evento) => {
     evento.preventDefault();
-    if (datosFormulario.nombreMesa.trim()) {
-      alCrear({
-        tableName: datosFormulario.nombreMesa,
-        maxPlayers: datosFormulario.maximoJugadores,
-        bots: datosFormulario.bots,
-        smallBlind: datosFormulario.ciegaPequena,
-        bigBlind: datosFormulario.ciegaGrande,
-        isPrivate: datosFormulario.esPrivada
-      });
-    }
+    if (!datosFormulario.nombreMesa.trim()) return;
+
+    alCrear({
+      tableName: datosFormulario.nombreMesa,
+      maxPlayers: datosFormulario.maximoJugadores,
+      bots: datosFormulario.bots,
+      smallBlind: datosFormulario.ciegaPequena,
+      bigBlind: datosFormulario.ciegaGrande,
+      isPrivate: datosFormulario.esPrivada
+    });
   };
 
+  // Render del formulario y resumen
   return (
     <div className="create-table-page">
       <div className="create-container">

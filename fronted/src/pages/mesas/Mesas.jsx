@@ -1,13 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { tableAPI } from '../../servicios/api';
 import { socketService } from '../../servicios/socketBase';
+import { getGameInvitations, invitationsUpdateEvent } from '../../servicios/invitaciones';
 import './Mesas.css';
 
 function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: usuario }) {
+  // Estado del lobby (mesas, carga e invitaciones)
   const [mesas, setMesas] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [invitaciones, setInvitaciones] = useState([]);
 
-  // Cargar mesas desde el backend
+  // Efectos: mantener invitaciones sincronizadas en memoria
+  useEffect(() => {
+    const actualizarInvitaciones = () => {
+      setInvitaciones(getGameInvitations());
+    };
+
+    actualizarInvitaciones();
+    window.addEventListener(invitationsUpdateEvent, actualizarInvitaciones);
+    return () => window.removeEventListener(invitationsUpdateEvent, actualizarInvitaciones);
+  }, []);
+
+  // Efectos: cargar mesas y suscribirse al lobby en tiempo real
   useEffect(() => {
     const cargarMesas = () => {
       setCargando(true);
@@ -49,6 +63,7 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
     };
   }, []);
 
+  // Valores derivados: textos segun cantidad de mesas
   let sufijoMesa = 's';
   let sufijoDisponible = 's';
   if (mesas.length === 1) {
@@ -81,13 +96,16 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
               const compraEntrada = Number(mesa.bigBlind || 0) * 100;
               const fichasUsuario = Number(usuario?.chips || 0);
               const fichasInsuficientes = compraEntrada > 0 && fichasUsuario < compraEntrada;
-              const deshabilitada = estaLlena || fichasInsuficientes;
+              const invitacionMesa = invitaciones.find((inv) => inv?.table?.id === mesa.id);
+              const tokenInvitacion = invitacionMesa?.invitationToken || null;
+              const requiereInvitacion = !!mesa.isPrivate && !tokenInvitacion;
+              const deshabilitada = estaLlena || fichasInsuficientes || requiereInvitacion;
 
               let iconoMesa = '🔓';
               let tipoMesaTexto = 'Pública';
               if (mesa.isPrivate) {
                 iconoMesa = '🔒';
-                tipoMesaTexto = 'Privada';
+                tipoMesaTexto = tokenInvitacion ? 'Privada (invitación)' : 'Privada';
               }
 
               let estadoMesaTexto = '⏳ Esperando';
@@ -104,12 +122,17 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
               if (fichasInsuficientes) {
                 tituloBotonUnirse = `Necesitas ${compraEntrada} fichas para entrar`;
               }
+              if (requiereInvitacion) {
+                tituloBotonUnirse = 'Necesitas una invitación para entrar';
+              }
 
               let textoBotonUnirse = '▶ Unirse';
               if (estaLlena) {
                 textoBotonUnirse = '🔒 Mesa Llena';
               } else if (fichasInsuficientes) {
                 textoBotonUnirse = '💸 Fichas Insuficientes';
+              } else if (requiereInvitacion) {
+                textoBotonUnirse = '🔒 Solo invitación';
               }
 
               let filaBots = null;
@@ -168,7 +191,7 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
                       className={claseBotonUnirse}
                       onClick={() => {
                         if (!deshabilitada) {
-                          alUnirseMesa(mesa);
+                          alUnirseMesa(mesa, tokenInvitacion).catch(() => {});
                         }
                       }}
                       disabled={deshabilitada}
@@ -191,6 +214,7 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
     );
   }
 
+  // Render del lobby y tarjetas de mesas
   return (
     <div className="lobby-page">
       <div className="lobby-header">

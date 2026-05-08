@@ -8,12 +8,14 @@ import AccountModal from './ModalCuenta';
 import './BarraNavegacion.css';
 
 function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
-  // Estado para controlar qué offcanvas está abierto (solo uno a la vez)
+  // Estado local de UI (offcanvas activo, modal cuenta y menu colapsado)
+  // Controla que solo un offcanvas este abierto a la vez
   const [activeOffcanvas, setActiveOffcanvas] = useState(null);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [navbarExpanded, setNavbarExpanded] = useState(false); // FIX: Toggle sin Bootstrap
 
-  // Funciones para abrir offcanvas (cierra cualquier otro abierto)
+  // Handlers: offcanvas y modales
+  // Abre un panel lateral y cierra cualquier otro abierto
   const openTrofeos = () => setActiveOffcanvas('trofeos');
   const openMisiones = () => setActiveOffcanvas('misiones');
   const openAmigos = () => setActiveOffcanvas('amigos');
@@ -22,7 +24,8 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
   const closeOffcanvas = () => setActiveOffcanvas(null);
   const closeAccount = () => setShowAccountModal(false);
 
-  // Manejar actualización de avatar
+  // Handlers: cuenta
+  // Actualiza avatar y notifica a la app
   const handleUpdateAvatar = (newAvatar) => {
     console.log('handleUpdateAvatar called with:', newAvatar);
     console.log('Current user:', user);
@@ -35,7 +38,8 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
     }
   };
 
-  // Función para ir a inicio
+  // Handlers: navegacion
+  // Navegacion principal por vistas
   const handleInicio = () => {
     if (onNavigate) onNavigate('inicio');
   };
@@ -51,11 +55,14 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
     }
   };
 
+  // Handlers: navbar responsivo
+  // Toggle del menu movil sin JS de Bootstrap
   const toggleNavbar = () => {
     setNavbarExpanded(!navbarExpanded);
   };
 
-  // Función para cerrar sesión
+  // Handlers: sesion
+  // Confirma y ejecuta cierre de sesion
   const handleCerrarSesion = () => {
     // Cerrar cualquier toast de confirmación previo
     toast.dismiss('logout-confirm');
@@ -106,11 +113,13 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
     ), { duration: 5000, id: 'logout-confirm' });
   };
 
+  // Valores derivados: clase del menu colapsado
   let claseMenuNavegacion = 'navbar-collapse collapse';
   if (navbarExpanded) {
     claseMenuNavegacion = 'navbar-collapse show';
   }
 
+  // Render de navbar, offcanvas y modal de cuenta
   return (
     <>
       <nav className="navbar navbar-expand-lg navbar-dark navbar-casino">

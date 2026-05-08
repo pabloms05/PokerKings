@@ -4,6 +4,7 @@ import { friendAPI } from '../../servicios/api';
 import { socketService } from '../../servicios/socketBase';
 
 function AmigosOffcanvas({ show, onHide }) {
+  // Estado del panel y ref para refrescar presencia
   const [buscarAmigo, setBuscarAmigo] = useState('');
   const [amigos, setAmigos] = useState([]);
   const [pendientes, setPendientes] = useState([]);
@@ -12,10 +13,12 @@ function AmigosOffcanvas({ show, onHide }) {
   const [searchingUsers, setSearchingUsers] = useState(false);
   const friendsRef = useRef([]);
 
+  // Efectos: mantener ref con la lista actual de amigos
   useEffect(() => {
     friendsRef.current = amigos;
   }, [amigos]);
 
+  // Helpers: carga amigos, pendientes y estado online
   const loadFriendsData = () => {
     setLoading(true);
 
@@ -67,6 +70,7 @@ function AmigosOffcanvas({ show, onHide }) {
     });
   };
 
+  // Efectos: carga inicial al abrir el panel
   useEffect(() => {
     if (show) {
       loadFriendsData();
@@ -75,6 +79,7 @@ function AmigosOffcanvas({ show, onHide }) {
     }
   }, [show]);
 
+  // Efectos: busqueda con debounce para agregar amigos
   useEffect(() => {
     if (!show) return;
 
@@ -117,6 +122,7 @@ function AmigosOffcanvas({ show, onHide }) {
     };
   }, [buscarAmigo, show]);
 
+  // Efectos: presencia en tiempo real y refresh periodico
   useEffect(() => {
     if (!show) return;
 
@@ -178,6 +184,7 @@ function AmigosOffcanvas({ show, onHide }) {
     };
   }, [show]);
 
+  // Handlers: enviar solicitudes, aceptar/rechazar y eliminar
   const handleAgregarAmigo = () => {
     const target = buscarAmigo.trim();
     if (!target) return;
@@ -247,6 +254,7 @@ function AmigosOffcanvas({ show, onHide }) {
     );
   };
 
+  // Valores derivados: clases y contenido segun estado
   let claseOffcanvas = 'offcanvas offcanvas-start offcanvas-casino';
   if (show) {
     claseOffcanvas = 'offcanvas offcanvas-start offcanvas-casino show';
@@ -398,6 +406,7 @@ function AmigosOffcanvas({ show, onHide }) {
     );
   }
 
+  // Render del offcanvas con busqueda y listas
   return (
     <div 
       className={claseOffcanvas}
