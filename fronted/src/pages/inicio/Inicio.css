@@ -285,13 +285,7 @@
   }
 
   .home-player-stats {
-    top: 0.9rem;
-    left: 0.85rem;
-    right: 0.85rem;
-    width: auto;
-    bottom: auto;
-    transform: scale(0.82);
-    transform-origin: top center;
+    display: none;
   }
 
   .home-actions-container {

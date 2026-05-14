@@ -82,8 +82,15 @@
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 /* Menú desplegable */
@@ -217,6 +224,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -276,8 +284,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .invite-modal {
@@ -303,6 +316,7 @@
     opacity: 0;
     transform: translate(-50%, -40%);
   }
+
   to {
     opacity: 1;
     transform: translate(-50%, -50%);
@@ -653,11 +667,17 @@
 @media (max-width: 1100px) {
   .table-page {
     padding: 0.5rem 1rem 1rem;
+    background:
+      linear-gradient(135deg, rgba(10, 14, 39, 0.86) 0%, rgba(26, 26, 46, 0.9) 100%),
+      url('/assets/images/fondo-general-movil.png') center center / cover no-repeat fixed;
   }
+
   .table-title {
     font-size: 1.6rem;
   }
-  .btn-back, .btn-menu {
+
+  .btn-back,
+  .btn-menu {
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
   }
@@ -847,14 +867,31 @@
 }
 
 @keyframes winner-popin {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
-  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 @keyframes winner-bounce {
-  0%   { transform: scale(0.5); opacity: 0; }
-  60%  { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* ===================== BUSTED REBUY MODAL ===================== */

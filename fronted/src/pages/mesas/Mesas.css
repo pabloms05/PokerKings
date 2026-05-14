@@ -222,9 +222,12 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.5;
   }
+
   50% {
     opacity: 1;
   }
@@ -251,6 +254,14 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .lobby-page {
+    min-height: calc(100vh - 80px);
+    background:
+      linear-gradient(135deg, rgba(10, 14, 39, 0.86) 0%, rgba(26, 26, 46, 0.9) 100%),
+      url('/assets/images/fondo-general-movil.png') center center / cover no-repeat fixed;
+    padding: 2rem;
+  }
+
   .lobby-header {
     flex-direction: column;
     align-items: flex-start;
