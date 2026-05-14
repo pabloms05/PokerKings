@@ -3,13 +3,13 @@ import { authService } from '../../servicios/autenticacion';
 import './InicioSesion.css';
 
 function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
-  // Estado del formulario, carga y errores
+  // Estado del formulario: inputs, carga y mensaje de error
   const [identificador, setIdentificador] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [cargando, setCargando] = useState(false);
   const [errorInicio, setErrorInicio] = useState('');
 
-  // Handlers: login y cambios de input
+  // Handlers: login via authService y cambios de inputs
   const iniciarSesion = (identificadorLogin, contrasenaLogin, alFinalizar) => {
     authService.login(identificadorLogin, contrasenaLogin).then(
       (resultado) => {
@@ -62,7 +62,7 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
     setContrasena(eventoContrasena.target.value);
   };
 
-  // Valores derivados: contenido del boton segun estado
+  // Valores derivados: contenido del boton segun estado de carga
   let contenidoBoton = (
     <>
       <span>🎮</span>
@@ -79,18 +79,18 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
     );
   }
 
-  // Render de login, errores y accesos rapidos
+  // Render de login con errores y accesos rapidos
   return (
     <div className="login-container">
       <div className="login-card">
-        {/* Logo y Título */}
+        {/* Logo y titulo de la pantalla */}
         <div className="login-header">
           <img src="/assets/images/logo.png" alt="Poker Kings" className="login-logo" />
           <h2 className="login-title">🎰 Iniciar Sesión</h2>
           <p className="login-subtitle">Bienvenido de vuelta al casino</p>
         </div>
 
-        {/* Mostrar error si existe */}
+        {/* Mostrar error de autenticacion si existe */}
         {errorInicio && (
           <div className="login-error">
             <span className="error-icon">⚠️</span>
@@ -99,7 +99,7 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
         )}
 
         <form onSubmit={manejarEnvio} className="login-form">
-          {/* Email o username */}
+          {/* Campo de email o username */}
           <div className="form-group">
             <label htmlFor="identifier" className="form-label">
               <span className="label-icon">👤</span>
@@ -118,7 +118,7 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
             />
           </div>
 
-          {/* Contraseña */}
+          {/* Campo de contrasena */}
           <div className="form-group">
             <label htmlFor="password" className="form-label">
               <span className="label-icon">🔒</span>
@@ -136,7 +136,7 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
             />
           </div>
 
-          {/* Botón de login */}
+          {/* Boton para enviar el login */}
           <button
             type="submit"
             className="btn-login"
@@ -146,7 +146,7 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
           </button>
         </form>
 
-        {/* Botón para ir a registro */}
+        {/* Boton para ir a registro */}
         <div className="login-footer">
           <p className="footer-text">¿No tienes cuenta?</p>
           <button
@@ -158,7 +158,7 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
           </button>
         </div>
 
-        {/* Login rápido para pruebas */}
+        {/* Login rapido para pruebas locales */}
         <div className="quick-login">
           <div className="divider">
             <span>🧪 Pruebas rápidas:</span>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import './Tienda.css';
 
-// Constantes: catalogo fijo de paquetes
+// Constantes: catalogo fijo de paquetes disponibles en la tienda
 const PAQUETES = [
   {
     id: 1,
@@ -61,10 +61,10 @@ const PAQUETES = [
 ];
 
 function PaginaTienda({ usuario, alNavegar, alActualizarUsuario }) {
-  // Estado local: paquete en compra
+  // Estado local: paquete en compra para deshabilitar boton
   const [paqueteEnCompra, setPaqueteEnCompra] = useState(null);
 
-  // Handlers: simula compra y actualiza saldo
+  // Handlers: simula compra y actualiza saldo en UI
   const manejarComprar = (paquete) => {
     setPaqueteEnCompra(paquete.id);
 
@@ -84,10 +84,10 @@ function PaginaTienda({ usuario, alNavegar, alActualizarUsuario }) {
     }, 1200);
   };
 
-  // Render de la tienda de fichas
+  // Render de la tienda de fichas y banners informativos
   return (
     <div className="tienda-page">
-      {/* Header */}
+      {/* Header con titulo, volver y saldo actual */}
       <div className="tienda-header">
         <button className="btn-back" onClick={() => alNavegar('inicio')}>
           ← Volver
@@ -102,13 +102,13 @@ function PaginaTienda({ usuario, alNavegar, alActualizarUsuario }) {
         </div>
       </div>
 
-      {/* Aviso fichas gratis diarias */}
+      {/* Aviso de fichas gratis diarias */}
       <div className="aviso-gratis">
         <span>🎁 ¿Te quedaste sin fichas?</span>
         <strong> Cada 24h recibes 1.000 PK gratis</strong> al iniciar sesión.
       </div>
 
-      {/* Grid de paquetes */}
+      {/* Grid de paquetes con precios y badges */}
       <div className="paquetes-grid">
         {PAQUETES.map((paquete) => {
           let claseTarjeta = 'paquete-card';
@@ -163,7 +163,7 @@ function PaginaTienda({ usuario, alNavegar, alActualizarUsuario }) {
         })}
       </div>
 
-      {/* Nota legal */}
+      {/* Nota legal sobre moneda ficticia */}
       <div className="tienda-nota">
         ⚠️ Las fichas PK son moneda ficticia sin valor real. No se realizan cargos reales.
         Este es un juego de póker con fines de entretenimiento.

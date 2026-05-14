@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './ModalCuenta.css';
 
-// Constantes: lista fija de avatares disponibles
+// Constantes: lista fija de avatares disponibles para el selector
 const AVATAR_OPTIONS = [
   '😀', '😎', '🤩', '😇', '🥳',
   '🤠', '🤡', '👽', '👻', '💀',
@@ -15,7 +15,7 @@ const AVATAR_OPTIONS = [
 ];
 
 function AccountModal({ show, onHide, user, onUpdateAvatar }) {
-  // Estado del carrusel, cambios pendientes y guardado
+  // Estado del carrusel: avatar elegido, indice visible, cambios pendientes y guardado
   const [selectedAvatar, setSelectedAvatar] = useState(() => {
     let avatarInicial = '🎮';
     if (user && user.avatar) {
@@ -27,8 +27,8 @@ function AccountModal({ show, onHide, user, onUpdateAvatar }) {
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false); // FIX: Estado de carga
 
-  // Efectos
-  // Sincroniza el avatar actual del usuario con el carrusel
+  // Efectos: mantener carrusel alineado con el avatar del usuario
+  // Actualiza indice y avatar seleccionado cuando cambia user
   useEffect(() => {
     if (user && user.avatar) {
       const index = AVATAR_OPTIONS.indexOf(user.avatar);
@@ -39,7 +39,7 @@ function AccountModal({ show, onHide, user, onUpdateAvatar }) {
     }
   }, [user]);
 
-  // Handlers: navegacion del carrusel y guardado
+  // Handlers: mover el carrusel y guardar cambios del avatar
   const handlePrevious = () => {
     const newIndex = (currentIndex - 1 + AVATAR_OPTIONS.length) % AVATAR_OPTIONS.length;
     setCurrentIndex(newIndex);
@@ -87,7 +87,7 @@ function AccountModal({ show, onHide, user, onUpdateAvatar }) {
     onHide();
   };
 
-  // Valores derivados: texto del boton segun cambios
+  // Valores derivados: texto/estado del boton Guardar segun cambios y carga
   if (!show) return null;
 
   let contenidoBotonGuardar = '✓ Sin Cambios';
@@ -103,7 +103,7 @@ function AccountModal({ show, onHide, user, onUpdateAvatar }) {
     );
   }
 
-  // Render del modal y selector de avatar
+  // Render del modal de cuenta con info del usuario y carrusel de avatar
   return (
     <div className="account-modal-overlay" onClick={handleCancel}>
       <div className="account-modal-content" onClick={(eventoClick) => eventoClick.stopPropagation()}>
@@ -113,7 +113,7 @@ function AccountModal({ show, onHide, user, onUpdateAvatar }) {
         </div>
 
         <div className="account-modal-body">
-          {/* Información del usuario */}
+          {/* Informacion del usuario: username, email, chips y nivel */}
           <div className="user-info-section">
             <div className="info-row">
               <span className="info-label">Usuario:</span>
@@ -133,7 +133,7 @@ function AccountModal({ show, onHide, user, onUpdateAvatar }) {
             </div>
           </div>
 
-          {/* Selector de avatar con carrusel */}
+          {/* Selector de avatar con carrusel y controles prev/next */}
           <div className="avatar-carousel-section">
             <h3>Cambiar Avatar</h3>
             <div className="avatar-carousel">
@@ -162,7 +162,7 @@ function AccountModal({ show, onHide, user, onUpdateAvatar }) {
               {currentIndex + 1} / {AVATAR_OPTIONS.length}
             </div>
 
-            {/* Vista previa de avatares cercanos */}
+            {/* Vista previa de avatares cercanos para seleccionar rapido */}
             <div className="avatar-preview-strip">
               {[-2, -1, 0, 1, 2].map((offset) => {
                 const index = (currentIndex + offset + AVATAR_OPTIONS.length) % AVATAR_OPTIONS.length;

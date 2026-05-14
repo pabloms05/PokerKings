@@ -14,22 +14,22 @@ const OPCIONES_AVATAR = [
 ];
 
 function SelectorAvatar({ avatarSeleccionado, alSeleccionarAvatar }) {
-  // Estado local del selector (galeria abierta/cerrada)
+  // Estado local del selector: galeria abierta/cerrada
   const [estaAbierto, setEstaAbierto] = useState(false);
 
-  // Valores derivados: emoji actual a mostrar
+  // Valores derivados: emoji a mostrar segun seleccion
   let emojiAvatarSeleccionado = '👤';
   if (avatarSeleccionado) {
     emojiAvatarSeleccionado = avatarSeleccionado;
   }
 
-  // Handlers: seleccion y cierre de galeria
+  // Handlers: seleccionar avatar y cerrar galeria
   const manejarSeleccionAvatar = (avatar) => {
     alSeleccionarAvatar(avatar);
     setEstaAbierto(false);
   };
 
-  // Render del selector de avatar
+  // Render del selector con galeria y boton de cierre
   return (
     <div className="avatar-selector">
       <label className="form-label">

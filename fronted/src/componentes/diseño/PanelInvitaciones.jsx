@@ -8,10 +8,10 @@ import {
 } from '../../servicios/invitaciones';
 
 function InvitacionesOffcanvas({ show, onHide }) {
-  // Estado local: invitaciones guardadas en memoria
+  // Estado local: invitaciones guardadas en memoria del cliente
   const [invitaciones, setInvitaciones] = useState([]);
 
-  // Efectos: cargar y mantener invitaciones sincronizadas
+  // Efectos: cargar invitaciones desde memoria y escuchar cambios
   useEffect(() => {
     const loadInvitations = () => {
       setInvitaciones(getGameInvitations());
@@ -22,7 +22,7 @@ function InvitacionesOffcanvas({ show, onHide }) {
     return () => window.removeEventListener(invitationsUpdateEvent, loadInvitations);
   }, []);
 
-  // Handlers: aceptar o rechazar invitacion
+  // Handlers: aceptar invitacion (join mesa) o rechazarla
   const handleAceptar = (invitacion) => {
     if (!invitacion || !invitacion.table || !invitacion.table.id) {
       toast.error('La invitación no tiene una mesa válida');
@@ -53,7 +53,7 @@ function InvitacionesOffcanvas({ show, onHide }) {
     toast.success('Invitación rechazada');
   };
 
-  // Valores derivados: clases y contenido segun estado
+  // Valores derivados: clases y contenido segun si hay invitaciones
   let claseOffcanvas = 'offcanvas offcanvas-start offcanvas-casino';
   if (show) {
     claseOffcanvas = 'offcanvas offcanvas-start offcanvas-casino show';
@@ -106,7 +106,7 @@ function InvitacionesOffcanvas({ show, onHide }) {
     );
   }
 
-  // Render del offcanvas con lista de invitaciones
+  // Render del offcanvas con acciones aceptar/rechazar
   return (
     <div 
       className={claseOffcanvas}

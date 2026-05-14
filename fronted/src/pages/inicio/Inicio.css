@@ -1,11 +1,21 @@
 .home-page {
   position: relative;
-  min-height: calc(100vh - 80px);
+  flex: 1;
+  min-height: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding: 2rem;
-  background-image: linear-gradient(135deg, rgba(10, 14, 39, 0.55) 0%, rgba(26, 26, 46, 0.45) 50%, rgba(22, 33, 62, 0.55) 100%), url('/assets/images/inicio-fondo-mesa.png?v=6');
+  padding: 1.1rem 2rem 50px;
+  overflow: hidden;
+  background-image:
+    linear-gradient(
+      135deg,
+      rgba(10, 14, 39, 0.55) 0%,
+      rgba(26, 26, 46, 0.45) 50%,
+      rgba(22, 33, 62, 0.55) 100%
+    ),
+    url('/assets/images/inicio-fondo-mesa.png?v=6');
+
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
@@ -14,16 +24,18 @@
 
 .home-player-stats {
   position: absolute;
-  left: 1.2rem;
-  bottom: 1.2rem;
-  width: min(360px, calc(100vw - 2.4rem));
+  left: 1rem;
+  bottom: 2.8rem;
+  width: min(300px, calc(100vw - 2rem));
   background: linear-gradient(180deg, rgba(11, 20, 60, 0.95) 0%, rgba(6, 12, 38, 0.95) 100%);
   border: 2px solid rgba(218, 165, 32, 0.7);
   border-radius: 16px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  padding: 0.9rem 1rem;
+  padding: 0.72rem 0.85rem;
   color: #f5f5f5;
   z-index: 3;
+  transform: scale(0.9);
+  transform-origin: bottom left;
 }
 
 .home-player-stats-title {
@@ -91,6 +103,11 @@
 .home-content {
   max-width: 1200px;
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
   text-align: center;
 }
 
@@ -114,7 +131,7 @@
 .home-actions-container {
   display: flex;
   justify-content: center;
-  margin: 0 auto 3rem;
+  margin: 0 auto;
   animation: fadeInUp 1s ease-out;
 }
 
@@ -144,7 +161,6 @@
 }
 
 .btn-play {
-  margin-top: 300px;
   background: linear-gradient(135deg, #0b6623 0%, #1a8a35 100%);
   color: white;
 }
@@ -244,79 +260,47 @@
 /* Responsive */
 @media (max-width: 768px) {
   .home-page {
-    align-items: flex-start;
-    padding-top: 2.4rem;
-    padding-bottom: 8.8rem;
-    background-image: linear-gradient(135deg, rgba(10, 14, 39, 0.55) 0%, rgba(26, 26, 46, 0.45) 50%, rgba(22, 33, 62, 0.55) 100%), url('/assets/images/inicio-fondo-mesa-movil.png?v=3');
+    align-items: flex-end;
+    justify-content: center;
+    padding: 2rem 1rem 20px;
+
+    background-image:
+      linear-gradient(
+        135deg,
+        rgba(10, 14, 39, 0.55) 0%,
+        rgba(26, 26, 46, 0.45) 50%,
+        rgba(22, 33, 62, 0.55) 100%
+      ),
+      url('/assets/images/inicio-fondo-mesa-movil.png?v=3');
+
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
     background-color: #0a0e27;
   }
 
+  .home-content {
+    justify-content: center;
+    padding-bottom: 40px;
+  }
+
   .home-player-stats {
-    left: 0.9rem;
-    right: 0.9rem;
+    top: 0.9rem;
+    left: 0.85rem;
+    right: 0.85rem;
     width: auto;
-    bottom: 0.9rem;
-  }
-
-  .home-title {
-    font-size: 2.5rem;
-  }
-
-  .home-subtitle {
-    font-size: 1.1rem;
+    bottom: auto;
+    transform: scale(0.82);
+    transform-origin: top center;
   }
 
   .home-actions-container {
-    margin: 0 auto 2rem;
+    margin: 0 auto;
   }
 
   .home-buttons {
     width: min(88vw, 300px);
     max-width: 240px;
     gap: 0.7rem;
-  }
-
-  .home-buttons .btn-home {
-    width: 100%;
-    min-height: 58px;
-    padding: 0.55rem 0.85rem;
-    border-radius: 14px;
-  }
-
-  .home-buttons .btn-icon {
-    font-size: 1.15rem;
-  }
-
-  .home-buttons .btn-text {
-    font-size: 0.85rem;
-  }
-
-  .btn-home {
-    padding: 1rem 1.5rem;
-    font-size: 1rem;
-  }
-
-  .btn-icon {
-    font-size: 1.5rem;
-  }
-
-  .btn-text {
-    font-size: 0.95rem;
-  }
-
-  .info-card {
-    min-width: 120px;
-    padding: 1rem;
-  }
-
-  .info-icon {
-    font-size: 2rem;
-  }
-
-  .info-text {
-    font-size: 0.9rem;
   }
 }

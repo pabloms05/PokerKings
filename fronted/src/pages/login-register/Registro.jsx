@@ -4,7 +4,7 @@ import SelectorAvatar from './SelectorAvatar';
 import './Registro.css';
 
 function Registro({ alRegistroExitoso, alCambiarALogin }) {
-  // Estado del formulario, carga y errores
+  // Estado del formulario: datos, carga y errores
   const [datosFormulario, setDatosFormulario] = useState({
     nombreUsuario: '',
     correo: '',
@@ -16,7 +16,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
   const [errorRegistro, setErrorRegistro] = useState('');
   const [erroresCampos, setErroresCampos] = useState({});
 
-  // Handlers: cambios de inputs y envio del registro
+  // Handlers: cambios de input, validaciones y envio al backend
   const manejarCambio = (evento) => {
     const { name, value } = evento.target;
     setDatosFormulario({
@@ -24,7 +24,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
       [name]: value
     });
 
-    // Limpia errores cuando el usuario corrige datos.
+    // Limpia errores cuando el usuario corrige datos en el formulario.
     if (errorRegistro) setErrorRegistro('');
     if (erroresCampos[name]) {
       setErroresCampos((previo) => ({ ...previo, [name]: undefined }));
@@ -36,7 +36,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
     setErrorRegistro('');
     setErroresCampos({});
 
-    // Validaciones
+    // Validaciones basicas antes de enviar al backend
     if (datosFormulario.contrasena !== datosFormulario.confirmarContrasena) {
       setErrorRegistro('Las contraseñas no coinciden');
       return;
@@ -86,7 +86,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
     });
   };
 
-  // Valores derivados: texto del boton segun estado
+  // Valores derivados: texto del boton segun estado de carga
   let contenidoBotonRegistro = '✨ Crear Cuenta';
   if (cargando) {
     contenidoBotonRegistro = (
@@ -97,11 +97,11 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
     );
   }
 
-  // Render del formulario de registro
+  // Render del formulario de registro y mensajes
   return (
     <div className="register-container">
       <div className="register-card">
-        {/* Logo */}
+        {/* Logo del casino */}
         <div className="register-logo">
           <img src="/assets/images/logo.png" alt="Poker Kings" />
         </div>
@@ -110,7 +110,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
           🎰 Crear Cuenta
         </h2>
 
-        {/* Mostrar error si existe */}
+        {/* Mensaje de error general si existe */}
         {errorRegistro && (
           <div className="register-error">
             ⚠️ {errorRegistro}
@@ -118,13 +118,13 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
         )}
 
         <form onSubmit={manejarEnvio} className="register-form">
-          {/* Selector de avatar */}
+          {/* Selector de avatar inicial */}
           <SelectorAvatar
             avatarSeleccionado={datosFormulario.avatar}
             alSeleccionarAvatar={(avatar) => setDatosFormulario((previo) => ({ ...previo, avatar }))}
           />
 
-          {/* Nombre de usuario */}
+          {/* Campo de nombre de usuario */}
           <div className="form-group">
             <label className="form-label">
               👤 Nombre de Usuario
@@ -150,7 +150,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
             )}
           </div>
 
-          {/* Email */}
+          {/* Campo de email */}
           <div className="form-group">
             <label className="form-label">
               📧 Email
@@ -172,7 +172,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
             )}
           </div>
 
-          {/* Contraseña */}
+          {/* Campo de contrasena */}
           <div className="form-group">
             <label className="form-label">
               🔒 Contraseña
@@ -193,7 +193,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
             </small>
           </div>
 
-          {/* Confirmar contraseña */}
+          {/* Campo de confirmacion de contrasena */}
           <div className="form-group">
             <label className="form-label">
               🔒 Confirmar Contraseña
@@ -211,7 +211,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
             />
           </div>
 
-          {/* Botón de registro */}
+          {/* Boton para crear cuenta */}
           <button
             type="submit"
             className="btn-register"
@@ -221,7 +221,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
           </button>
         </form>
 
-        {/* Botón para ir a login */}
+        {/* Boton para volver al login */}
         <div className="register-footer">
           <p className="footer-text">¿Ya tienes cuenta?</p>
           <button
@@ -233,7 +233,7 @@ function Registro({ alRegistroExitoso, alCambiarALogin }) {
           </button>
         </div>
 
-        {/* Info de chips gratis */}
+        {/* Info de bono inicial de fichas */}
         <div className="welcome-bonus">
           🎁 <strong>¡Bienvenida!</strong>
           <br />

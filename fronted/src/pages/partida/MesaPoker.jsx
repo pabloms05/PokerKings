@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './MesaPoker.css';
 
-// Constantes: tamanos base del layout (en px)
+// Constantes: tamanos base del layout en px para escalar la mesa
 const BASE_DESKTOP_WIDTH = 1100;
 const BASE_DESKTOP_HEIGHT = 700;
 const BASE_MOVIL_VERTICAL_WIDTH = 760;
 const BASE_MOVIL_VERTICAL_HEIGHT = 1180;
 
-// Helper: detecta modo movil vertical para ajustar layout
+// Helper: detecta modo movil vertical para ajustar layout y posiciones
 const detectarModoMovilVertical = () => {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
     return false;
@@ -32,7 +32,7 @@ function PokerTable({
   currentPlayerIndex = null,
   onEmptySeatClick = null
 }) {
-  // Alias de props para usar nombres consistentes en todo el componente
+  // Alias de props para usar nombres consistentes y facilitar lectura
   const maxJugadores = maxPlayers;
   const jugadores = players;
   const faseJuego = gamePhase;
@@ -45,20 +45,20 @@ function PokerTable({
   const indiceUsuarioActual = currentUserIndex;
   const indiceTurnoActual = currentPlayerIndex;
 
-  // Estado y refs para animaciones y escalado responsivo
-  // Estado para rastrear que cartas ya fueron reveladas
+  // Estado y refs para animaciones, escalado responsivo y deteccion de cambios
+  // Estado para rastrear que cartas ya fueron reveladas y evitar reanimar
   const [cartasReveladas, setCartasReveladas] = useState([]);
 
-  // Escala responsiva: mide el wrapper y escala el contenedor proporcionalmente
+  // Escala responsiva: mide el wrapper y escala el contenedor proporcionalmente para evitar overflow
   const referenciaWrapper = useRef(null);
   const [escala, setEscala] = useState(1);
   const [esMovilVertical, setEsMovilVertical] = useState(detectarModoMovilVertical);
 
-  // Valores derivados: dimensiones base segun orientacion
+  // Valores derivados: dimensiones base segun orientacion para calcular escala
   const anchoBase = esMovilVertical ? BASE_MOVIL_VERTICAL_WIDTH : BASE_DESKTOP_WIDTH;
   const altoBase = esMovilVertical ? BASE_MOVIL_VERTICAL_HEIGHT : BASE_DESKTOP_HEIGHT;
 
-  // Efectos: detectar modo y recalcular escala
+  // Efectos: detectar modo y recalcular escala cuando cambia el viewport
   useEffect(() => {
     const actualizarModo = () => {
       setEsMovilVertical(detectarModoMovilVertical());
@@ -87,8 +87,8 @@ function PokerTable({
     return () => observador.disconnect();
   }, [anchoBase]);
 
-  // Valores derivados: indice del usuario actual en la mesa
-  // Preferimos currentUserIndex cuando llega del padre; si no, lo buscamos por id.
+  // Valores derivados: indice del usuario actual en la mesa para rotar posiciones
+  // Preferimos currentUserIndex cuando llega del padre; si no, lo buscamos por id
   const indiceUsuarioActualCalculado = currentUserIndex !== null && currentUserIndex !== undefined
     ? currentUserIndex
     : players.findIndex((jugador) => {
@@ -96,21 +96,21 @@ function PokerTable({
       return String(idJugador) === String(currentPlayerId);
     });
   
-  // Refs para detectar cambios reales en fase y cartas
+  // Refs para detectar cambios reales en fase y cartas y decidir si animar
   const referenciaFaseAnterior = useRef(gamePhase);
   const referenciaCantidadCartasAnterior = useRef(communityCards.length);
   
-  // Helpers: cartas, avatares y estados visuales
-  // Obtener ruta de imagen de carta (e.g., "AS" -> "/assets/images/AS.png")
+  // Helpers: cartas, avatares y estados visuales de fase
+  // Obtiene ruta de imagen de carta (e.g., "AS" -> "/assets/images/AS.png")
   const obtenerImagenCarta = (carta) => {
     if (!carta || carta.length < 2) return null;
     
-    // Normalizar formato: "10H" debe quedar como "10H", "Ah" como "AH"
+    // Normaliza formato: "10H" queda "10H", "Ah" pasa a "AH"
     let rango = carta.slice(0, -1).toUpperCase();
     let palo = carta.slice(-1).toUpperCase();
 
     
-    // Asegurar que rank esté en el formato correcto
+    // Valida rank y palo para evitar cartas invalidas
     const rangosValidos = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     const palosValidos = ['C', 'D', 'H', 'S'];
     
@@ -233,7 +233,7 @@ function PokerTable({
     );
   };
 
-  // Helpers: determinar cartas comunitarias segun fase del juego
+  // Helpers: determina cartas comunitarias visibles segun fase del juego
   const obtenerCartasVisibles = () => {
     switch (gamePhase) {
       case 'pre-flop':
@@ -254,12 +254,12 @@ function PokerTable({
   const cartasVisibles = obtenerCartasVisibles();
   const espaciosVacios = 5 - cartasVisibles.length;
 
-  // Efectos: revelar cartas nuevas con delay cuando cambia la fase
+  // Efectos: revela cartas nuevas con delay cuando cambia la fase o cantidad
   useEffect(() => {
     const cambioFase = referenciaFaseAnterior.current !== gamePhase;
     const cambioCartas = referenciaCantidadCartasAnterior.current !== communityCards.length;
     
-    // Resetear cuando cambia la fase a waiting (nueva mano)
+    // Resetea cartas reveladas cuando la fase vuelve a waiting (nueva mano)
     if (gamePhase === 'waiting') {
       setCartasReveladas([]);
       referenciaFaseAnterior.current = gamePhase;
@@ -267,12 +267,12 @@ function PokerTable({
       return;
     }
 
-    // Solo animar si hubo cambio real
+    // Solo animar si hubo cambio real en fase o cartas
     if (!cambioFase && !cambioCartas) {
       return;
     }
 
-    // Agregar nuevas cartas con un pequeño delay para activar la transición
+    // Agrega nuevas cartas con delay para activar transicion escalonada
     const cartasVisiblesActuales = obtenerCartasVisibles();
     cartasVisiblesActuales.forEach((carta, indice) => {
       if (!cartasReveladas.includes(carta)) {
@@ -287,13 +287,13 @@ function PokerTable({
       }
     });
     
-    // Actualizar referencias
+    // Actualiza referencias de fase y cantidad de cartas
     referenciaFaseAnterior.current = gamePhase;
     referenciaCantidadCartasAnterior.current = communityCards.length;
   }, [gamePhase, communityCards.length, cartasReveladas]);
   
   // Layout de asientos segun cantidad de jugadores y orientacion
-  // Posiciones de los asientos alrededor de la mesa segun el numero maximo
+  // Posiciones base de los asientos alrededor de la mesa segun el numero maximo
   const posicionesAsientosHorizontal = {
     4: [
       { top: '0%', left: '50%', transform: 'translateX(-50%)' },       // Arriba
@@ -351,21 +351,21 @@ function PokerTable({
   const mapaPosiciones = esMovilVertical ? posicionesAsientosVertical : posicionesAsientosHorizontal;
   const posiciones = mapaPosiciones[maxJugadores] || mapaPosiciones[6];
 
-  // Valores derivados: rotacion de jugadores
-  // Reordenar jugadores para que el usuario actual siempre este abajo
+  // Valores derivados: rotacion de jugadores para mostrarte abajo
+  // Reordena jugadores para que el usuario actual siempre este abajo
   const indiceCentroInferior = maxJugadores === 6 ? 3 : (maxJugadores === 4 ? 2 : maxJugadores - 1);
   let jugadoresMostrados = [];
   let mapaIndicesJugadores = {};
 
-  // Construir array de posiciones con rotación para poner al usuario en la posición inferior
+  // Construye array rotado para poner al usuario en la posicion inferior
   if (indiceUsuarioActualCalculado !== null && indiceUsuarioActualCalculado !== undefined && jugadores.length > 0 && indiceUsuarioActualCalculado >= 0) {
-    // Calcular offset: posiciones a rotar para que el usuario quede abajo
+    // Calcula offset: posiciones a rotar para que el usuario quede abajo
     const desplazamiento = (indiceCentroInferior - indiceUsuarioActualCalculado + jugadores.length) % jugadores.length;
     
-    // Llenar el array de posiciones con jugadores rotados
+    // Llena el array de posiciones con jugadores rotados y asientos vacios
     for (let i = 0; i < maxJugadores; i++) {
       if (i < jugadores.length) {
-        // Calcular el indice original del jugador en esta posicion
+        // Calcula el indice original del jugador en esta posicion
         const originalIndex = (i - desplazamiento + jugadores.length) % jugadores.length;
         const originalPlayer = jugadores[originalIndex];
         jugadoresMostrados[i] = originalPlayer?.isSittingOut ? null : originalPlayer;
@@ -375,7 +375,7 @@ function PokerTable({
       }
     }
   } else {
-    // Si no sabemos quien es el usuario actual, mostramos jugadores en orden natural.
+    // Si no sabemos quien es el usuario actual, mostramos jugadores en orden natural
     for (let i = 0; i < maxJugadores; i++) {
       if (i < jugadores.length) {
         if (jugadores[i] && jugadores[i].isSittingOut) {
@@ -390,7 +390,7 @@ function PokerTable({
     }
   }
 
-  // Render
+  // Render de la mesa, cartas y asientos
   return (
     <div
       ref={referenciaWrapper}
@@ -411,7 +411,7 @@ function PokerTable({
           marginLeft: `-${anchoBase / 2}px`,
         }}
       >
-      {/* Mesa de poker */}
+      {/* Mesa de poker: imagen base y contenedor */}
       <div className="poker-table">
         <img 
           src="/assets/images/mesa-poker.png" 
@@ -419,10 +419,10 @@ function PokerTable({
           className="table-image"
         />
         
-        {/* Cartas comunitarias encima de la mesa */}
+        {/* Cartas comunitarias encima de la mesa (flop/turn/river) */}
         <div className="community-cards-on-table">
           <div className="cards-row-table">
-            {/* Cartas visibles */}
+            {/* Cartas visibles segun fase */}
             {cartasVisibles.map((carta, indice) => {
               const imagenCarta = obtenerImagenCarta(carta);
               const estaRevelada = cartasReveladas.includes(carta);
@@ -459,14 +459,14 @@ function PokerTable({
               );
             })}
 
-            {/* Slots vacíos */}
+            {/* Slots vacios para completar 5 cartas */}
             {gamePhase !== 'waiting' && Array.from({ length: espaciosVacios }).map((_, indice) => (
               <div key={`empty-${indice}`} className="community-card-table empty">
                 <div className="card-back-table">🂠</div>
               </div>
             ))}
 
-            {/* Estado de espera */}
+            {/* Estado de espera: placeholders cuando no hay mano */}
             {gamePhase === 'waiting' && Array.from({ length: 5 }).map((_, indice) => (
               <div key={`waiting-${indice}`} className="community-card-table waiting">
                 <div className="card-placeholder-table">?</div>
@@ -475,7 +475,7 @@ function PokerTable({
           </div>
         </div>
 
-        {/* Pot (bote central) debajo de las cartas */}
+        {/* Pot (bote central) debajo de las cartas y side pots */}
         <div className="pot-container">
           <div className="pot-amount">💰 {pot.toLocaleString()} PK</div>
           {sidePots && sidePots.length > 0 && (
@@ -489,7 +489,7 @@ function PokerTable({
           )}
         </div>
 
-        {/* Indicador de fase */}
+        {/* Indicador de fase: preflop, flop, turn, river, showdown */}
         <div className="phase-indicator">
           <div className={obtenerClasePuntoFase('preflop')}></div>
           <div className={obtenerClasePuntoFase('flop')}></div>
@@ -499,12 +499,12 @@ function PokerTable({
         </div>
       </div>
 
-      {/* Asientos de jugadores */}
+      {/* Asientos de jugadores alrededor de la mesa */}
       {Array.from({ length: maxPlayers }).map((_, indiceAsiento) => {
         const jugador = jugadoresMostrados[indiceAsiento];
         const posicion = posiciones[indiceAsiento];
         
-        // Obtener el índice original del jugador para las posiciones de dealer/blind
+        // Obtener el indice original del jugador para ubicar dealer/blinds
         let indiceOriginal = indiceAsiento;
         if (mapaIndicesJugadores[indiceAsiento] !== undefined) {
           indiceOriginal = mapaIndicesJugadores[indiceAsiento];
@@ -528,10 +528,10 @@ function PokerTable({
           >
             {jugador ? (
               <>
-                {/* Cartas del jugador - ARRIBA del player-info */}
+                {/* Cartas del jugador arriba del panel de info */}
                 <div className="player-cards">
                   {esJugadorActual && jugador.holeCards && jugador.holeCards.length > 0 ? (
-                    // Mostrar cartas reveladas solo para el jugador actual
+                    // Mostrar cartas reveladas solo para el jugador actual para no filtrar manos
                     jugador.holeCards.map((carta, indiceCarta) => {
                       const imagenCarta = obtenerImagenCarta(carta);
                       return (
@@ -545,13 +545,13 @@ function PokerTable({
                       );
                     })
                   ) : esJugadorActual ? (
-                    // Jugador actual sin cartas asignadas (esperando)
+                    // Jugador actual sin cartas asignadas: mostrar reverso mientras espera
                     <>
                       <div className="player-card">🂠</div>
                       <div className="player-card">🂠</div>
                     </>
                   ) : (
-                    // Mostrar cartas ocultas para otros jugadores
+                    // Mostrar cartas ocultas para otros jugadores para mantener secreto
                     <>
                       <div className="player-card">🂠</div>
                       <div className="player-card">🂠</div>
@@ -559,9 +559,9 @@ function PokerTable({
                   )}
                 </div>
 
-                {/* Info del jugador - DEBAJO de las cartas */}
+                {/* Info del jugador debajo de las cartas */}
                 <div className="player-info">
-                  {/* Position Indicators */}
+                  {/* Indicadores de posicion: dealer y blinds */}
                   {posicionDealer === indiceOriginal && (
                     <div className="position-badge dealer-badge">D</div>
                   )}
@@ -575,12 +575,12 @@ function PokerTable({
                   <div className="player-header">
                     <div className="player-avatar">
                       {(() => {
-                        // Si no hay avatar o es una ruta de imagen
+                        // Si no hay avatar o es una ruta de imagen, usar emoji por defecto
                         if (!jugador.avatar || jugador.avatar.includes('.png') || jugador.avatar.includes('.jpg') || jugador.avatar.includes('default-avatar')) {
-                          // Si es bot, usar emoji de robot, sino cara genérica
+                          // Si es bot, usar emoji de robot, si no cara generica
                           return jugador.username && jugador.username.toLowerCase().includes('bot') ? '🤖' : '👤';
                         }
-                        // Usar el emoji del avatar
+                        // Usar el emoji del avatar cuando es un emoji valido
                         return jugador.avatar;
                       })()}
                     </div>

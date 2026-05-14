@@ -8,14 +8,14 @@ import AccountModal from './ModalCuenta';
 import './BarraNavegacion.css';
 
 function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
-  // Estado local de UI (offcanvas activo, modal cuenta y menu colapsado)
-  // Controla que solo un offcanvas este abierto a la vez
+  // Estado local de UI: offcanvas activo, modal de cuenta y menu colapsado
+  // Controla que solo un offcanvas este abierto a la vez para evitar solapamientos
   const [activeOffcanvas, setActiveOffcanvas] = useState(null);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [navbarExpanded, setNavbarExpanded] = useState(false); // FIX: Toggle sin Bootstrap
 
-  // Handlers: offcanvas y modales
-  // Abre un panel lateral y cierra cualquier otro abierto
+  // Handlers: apertura/cierre de offcanvas y modal
+  // Abre un panel lateral y cierra cualquier otro abierto para mantener foco
   const openTrofeos = () => setActiveOffcanvas('trofeos');
   const openMisiones = () => setActiveOffcanvas('misiones');
   const openAmigos = () => setActiveOffcanvas('amigos');
@@ -24,8 +24,8 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
   const closeOffcanvas = () => setActiveOffcanvas(null);
   const closeAccount = () => setShowAccountModal(false);
 
-  // Handlers: cuenta
-  // Actualiza avatar y notifica a la app
+  // Handlers: cuenta y actualizacion de avatar
+  // Actualiza avatar, notifica a la app y muestra toast
   const handleUpdateAvatar = (newAvatar) => {
     console.log('handleUpdateAvatar called with:', newAvatar);
     console.log('Current user:', user);
@@ -38,13 +38,13 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
     }
   };
 
-  // Handlers: navegacion
-  // Navegacion principal por vistas
+  // Handlers: navegacion principal del navbar
+  // Navegacion principal por vistas (inicio, mesas, tienda)
   const handleInicio = () => {
     if (onNavigate) onNavigate('inicio');
   };
 
-  // Función para ir al lobby de mesas
+  // Funcion para ir al lobby de mesas desde el navbar
   const handleMesas = () => {
     if (onNavigate) onNavigate('mesas');
   };
@@ -61,13 +61,13 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
     setNavbarExpanded(!navbarExpanded);
   };
 
-  // Handlers: sesion
-  // Confirma y ejecuta cierre de sesion
+  // Handlers: sesion y logout con confirmacion
+  // Confirma y ejecuta cierre de sesion con toast
   const handleCerrarSesion = () => {
-    // Cerrar cualquier toast de confirmación previo
+    // Cierra cualquier toast de confirmacion previo para evitar duplicados
     toast.dismiss('logout-confirm');
 
-    // Mostrar toast de confirmación
+    // Muestra toast de confirmacion con botones de accion
     toast((instanciaToast) => (
       <div style={{ textAlign: 'center' }}>
         <p style={{ margin: '0 0 10px 0', fontWeight: 'bold' }}>
@@ -113,7 +113,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
     ), { duration: 5000, id: 'logout-confirm' });
   };
 
-  // Render de navbar, offcanvas y modal de cuenta
+  // Render de navbar, offcanvas y modal de cuenta con props actuales
   return (
     <>
       <nav className="navbar navbar-expand-lg navbar-dark navbar-casino">
@@ -122,7 +122,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
             <img src="/assets/images/logo.png" alt="Poker Kings" height="75" />
           </span>
 
-          {/* Botón hamburguesa para móvil - FIX: Sin Bootstrap JS */}
+          {/* Boton hamburguesa para movil: alterna menu sin Bootstrap JS */}
           <button
             className="navbar-toggler"
             type="button"
@@ -136,21 +136,21 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
 
           <div className={`navbar-collapse collapse${navbarExpanded ? ' show' : ''}`} id="navbarNav">
             <ul className="navbar-nav ms-auto">
-              {/* 1. Inicio */}
+              {/* 1. Inicio: vuelve a la vista principal */}
               <li className="nav-item">
                 <button className="nav-link btn btn-link" onClick={handleInicio}>
                   🏠 Inicio
                 </button>
               </li>
 
-              {/* 2. Mesas Disponibles */}
+              {/* 2. Mesas: abre el lobby en tiempo real */}
               <li className="nav-item">
                 <button className="nav-link btn btn-link" onClick={handleMesas}>
                   🎮 Mesas
                 </button>
               </li>
 
-              {/* 3. Tienda */}
+              {/* 3. Tienda: abre catalogo de fichas */}
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link nav-tienda"
@@ -160,7 +160,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
                 </button>
               </li>
 
-              {/* 4. Trofeos */}
+              {/* 4. Trofeos: abre panel de logros */}
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link"
@@ -170,7 +170,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
                 </button>
               </li>
 
-              {/* 5. Misiones Diarias */}
+              {/* 5. Misiones: abre panel de misiones */}
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link"
@@ -180,7 +180,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
                 </button>
               </li>
 
-              {/* 6. Amigos */}
+              {/* 6. Amigos: abre panel de amigos */}
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link"
@@ -190,7 +190,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
                 </button>
               </li>
 
-              {/* 7. Invitaciones */}
+              {/* 7. Invitaciones: abre panel de invitaciones */}
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link"
@@ -200,7 +200,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
                 </button>
               </li>
 
-              {/* 8. Mi Cuenta */}
+              {/* 8. Mi cuenta: abre modal de perfil */}
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link"
@@ -210,7 +210,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
                 </button>
               </li>
 
-              {/* 9. Cerrar Sesión */}
+              {/* 9. Cerrar sesion: confirma y cierra */}
               <li className="nav-item">
                 <button
                   className="nav-link btn btn-link text-danger"
@@ -224,14 +224,14 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
         </div>
       </nav>
 
-      {/* Offcanvas para Trofeos */}
+      {/* Offcanvas de Trofeos: lista logros */}
       <TrofeosOffcanvas
         show={activeOffcanvas === 'trofeos'}
         onHide={closeOffcanvas}
         userId={user?.id}
       />
 
-      {/* Offcanvas para Misiones */}
+      {/* Offcanvas de Misiones: lista progreso y recompensas */}
       <MisionesOffcanvas
         show={activeOffcanvas === 'misiones'}
         onHide={closeOffcanvas}
@@ -239,19 +239,19 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
         onUserStatsUpdated={onUpdateUser}
       />
 
-      {/* Offcanvas para Amigos */}
+      {/* Offcanvas de Amigos: buscar, aceptar y eliminar */}
       <AmigosOffcanvas
         show={activeOffcanvas === 'amigos'}
         onHide={closeOffcanvas}
       />
 
-      {/* Offcanvas para Invitaciones */}
+      {/* Offcanvas de Invitaciones: aceptar o rechazar */}
       <InvitacionesOffcanvas
         show={activeOffcanvas === 'invitaciones'}
         onHide={closeOffcanvas}
       />
 
-      {/* Modal de Mi Cuenta */}
+      {/* Modal de Mi Cuenta: datos y cambio de avatar */}
       <AccountModal
         show={showAccountModal}
         onHide={closeAccount}

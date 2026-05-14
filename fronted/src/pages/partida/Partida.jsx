@@ -9,10 +9,10 @@ import { socketService } from '../../servicios/socketBase';
 import './Partida.css';
 
 function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUpdateUser: alActualizarUsuario }) {
-  // Constantes locales para limites del chat
+  // Constantes locales: limite maximo del chat para validar input
   const MAXIMO_CARACTERES_CHAT = 300;
 
-  // Estado principal de partida, UI y chat
+  // Estado principal de partida: jugadores, UI (menus/modales) y chat
   const [jugadores, setJugadores] = useState([]);
   const [mostrarMenu, setMostrarMenu] = useState(false);
   const [esEspectador, setEsEspectador] = useState(false);
@@ -34,12 +34,12 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
   const referenciaFinChat = useRef(null);
   const referenciaAmigos = useRef([]);
 
-  // Valores derivados usados por efectos de inicializacion
+  // Valores derivados usados por efectos de inicializacion y dependencias
   const idMesa = mesa?.id;
   const idUsuario = usuario?.id;
 
-  // Efectos: layout y chat en tiempo real
-  // Detecta tamano de pantalla para colapsar botones
+  // Efectos: layout responsivo y chat en tiempo real
+  // Detecta tamano de pantalla para colapsar botones en modo compacto
   useEffect(() => {
     const manejarResize = () => setVistaCompacta(window.innerWidth < 900);
     window.addEventListener('resize', manejarResize);
@@ -74,7 +74,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
       }
     };
 
-    // Suscribir eventos del chat de esta mesa.
+    // Suscribe eventos del chat de esta mesa para historial y nuevos mensajes
     gameSocket.on('tableChatHistory', alHistorialChat);
     gameSocket.on('tableChatMessage', alMensajeChat);
 
@@ -97,7 +97,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     referenciaFinChat.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [mensajesChat, chatAbierto]);
 
-  // Efectos: presencia y amigos cuando el modal esta abierto
+  // Efectos: presencia y amigos cuando el modal de invitacion esta abierto
   useEffect(() => {
     if (!mostrarModalInvitacion) return;
 
@@ -126,7 +126,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     socketService.onFriendsPresenceSnapshot(alSnapshotPresencia);
     socketService.requestFriendsPresenceSnapshot();
 
-    // Refrescamos presencia cada pocos segundos para no mostrar estados viejos.
+    // Refrescamos presencia cada pocos segundos para no mostrar estados viejos
     const idIntervaloSnapshot = setInterval(() => {
       socketService.requestFriendsPresenceSnapshot();
     }, 2000);
@@ -159,17 +159,17 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
       );
     };
 
-    // Doble capa: evento realtime + consulta REST periódica para mayor consistencia.
+    // Doble capa: evento realtime + consulta REST periodica para mayor consistencia
     refrescarEstadoOnline();
     const idIntervalo = setInterval(refrescarEstadoOnline, 1500);
 
     return () => clearInterval(idIntervalo);
   }, [mostrarModalInvitacion]);
 
-  // Hook central del juego (estado principal del backend)
+  // Hook central del juego: estado principal sincronizado con backend
   const juegoPoker = useJuegoPoker(usuario);
 
-  // Helpers: refrescar saldo desde el backend
+  // Helpers: refrescar saldo desde el backend y actualizar usuario
   const refrescarSaldoUsuario = async () => {
     if (!usuario?.id || !alActualizarUsuario) return;
 
@@ -182,8 +182,8 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     }
   };
 
-  // Efectos: sincronizacion con backend
-  // Sincroniza jugadores y modo espectador
+  // Efectos: sincronizacion con backend para jugadores y resultados
+  // Sincroniza jugadores y modo espectador segun estado del juego
   useEffect(() => {
     if (juegoPoker.players && juegoPoker.players.length > 0) {
       setJugadores(juegoPoker.players);
@@ -253,7 +253,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
         }
 
         if (eliminado) {
-          // Dar tiempo a ver resultado antes de pasar a espectador.
+          // Dar tiempo a ver resultado antes de pasar a espectador
           const hasta = Date.now() + 3500;
           setRetrasoEspectadorHasta(hasta);
           setEsEspectador(false);
@@ -270,8 +270,8 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     }
   }, [juegoPoker.lastHandResult, juegoPoker.players, ultimaManoMostrada, usuario?.id]);
 
-  // Efectos: inicializar juego
-  // Inicia partida y se une a la sala de sockets
+  // Efectos: inicializar juego y unir sockets
+  // Inicia partida y se une a la sala de sockets de la mesa
   useEffect(() => {
     const inicializarJuego = async () => {
       if (!mesa || !usuario) return;
@@ -280,7 +280,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
         setCargando(true);
         setErrorVista(null);
 
-        // ESPERAR a unirse a la sala de WebSocket de la mesa ANTES de hacer startGame
+        // ESPERAR a unirse a la sala WebSocket de la mesa antes de startGame
         console.log(`🔌 Uniendose a sala de WebSocket: table_${mesa.id}`);
         try {
           await gameSocket.joinTable(mesa.id);
@@ -290,13 +290,13 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
           // Continuar de todas formas, pero puede haber problemas de sync
         }
 
-        // Crear lista de jugadores para el backend
+        // Crear lista de jugadores para el backend (al menos el usuario actual)
         const idsJugadores = [usuario.id]; // Comenzar con el usuario actual
         
-        // El backend manejará agregar más jugadores si existen en la mesa
-        // Por ahora, solo enviar el usuario actual
+        // El backend agrega mas jugadores si existen en la mesa
+        // Por ahora, solo enviar el usuario actual para iniciar
         
-        // Iniciar el juego en el backend
+        // Iniciar el juego en el backend y recibir estado inicial
         const response = await gameAPI.startGame(mesa.id, idsJugadores);
         
         // El backend devuelve response.data.game con el estado del juego
@@ -304,7 +304,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
         const idJuego = datosJuego.id;
         
         if (idJuego) {
-          // Guardar el ID del juego
+          // Guardar el ID del juego para acciones posteriores
           juegoPoker.setGameId(idJuego);
 
           // Hidratar estado local inmediatamente con jugadores
@@ -312,7 +312,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
             setJugadores(datosJuego.players);
           }
           
-          // El hook usePokerGame recibirá actualizaciones de todo el estado via WebSocket
+          // El hook usePokerGame recibira actualizaciones de todo el estado via WebSocket
           console.log('✅ Juego iniciado/unido:', idJuego);
           await refrescarSaldoUsuario();
         } else {
@@ -326,7 +326,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
       }
     };
 
-    // Esperar un poco antes de inicializar (para que el WebSocket esté listo)
+    // Esperar un poco antes de inicializar para que el WebSocket este listo
     const temporizador = setTimeout(() => {
       inicializarJuego();
     }, 500);
@@ -339,8 +339,8 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     };
   }, [idMesa, idUsuario]);
 
-  // Handlers de partida (levantarse, sentarse, salir, chat, invitaciones)
-  // Cambiar a modo espectador
+  // Handlers de partida: levantarse, sentarse, salir, chat e invitaciones
+  // Cambiar a modo espectador y marcar jugador como sitting out
   const manejarLevantarse = () => {
     let promesaSalida = Promise.resolve();
     if (juegoPoker.gameId) {
@@ -392,7 +392,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     });
   };
 
-  // Volver a sentarse en la mesa
+  // Volver a sentarse en la mesa y reiniciar join/start
   const manejarSentarse = () => {
     if (!mesa || !usuario) {
       setEsEspectador(false);
@@ -431,7 +431,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     });
   };
 
-  // Salir de la mesa con confirmacion
+  // Salir de la mesa con confirmacion y limpiar sockets
   const manejarSalirMesa = () => {
     const ejecutarSalida = () => {
       let promesaSalida = Promise.resolve();
@@ -520,7 +520,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     });
   };
 
-  // Abrir modal e hidratar lista de amigos para invitar
+  // Abrir modal y cargar lista de amigos con estado online
   const manejarAbrirInvitar = () => {
     setCargandoAmigos(true);
     friendAPI.getFriends().then(
@@ -565,7 +565,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     });
   };
 
-  // Seleccionar o deseleccionar amigos
+  // Seleccionar o deseleccionar amigos para invitacion
   const alternarSeleccionAmigo = (idAmigo) => {
     setAmigosSeleccionados((seleccionPrevio) => {
       if (seleccionPrevio.includes(idAmigo)) {
@@ -576,7 +576,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     });
   };
 
-  // Enviar invitaciones a amigos seleccionados
+  // Enviar invitaciones a amigos seleccionados via API
   const manejarEnviarInvitaciones = () => {
     if (!juegoPoker.gameId) {
       toast.error('La partida aún no está lista para enviar invitaciones');
@@ -628,7 +628,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     );
   };
 
-  // Render temprano: validaciones de estado
+  // Render temprano: validaciones de estado y mensajes de error
   if (!mesa) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: '#e0e0e0' }}>
@@ -670,8 +670,8 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     );
   }
 
-  // Render: valores derivados de UI
-  // Si el hook ya trae jugadores del backend, usamos esa fuente como principal.
+  // Render: valores derivados de UI para botones y chat
+  // Si el hook ya trae jugadores del backend, usamos esa fuente como principal
   let jugadoresMesa = jugadores;
   if (juegoPoker.players.length > 0) {
     jugadoresMesa = juegoPoker.players;
@@ -679,7 +679,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
 
   const indiceUsuarioActual = jugadoresMesa.findIndex((jugador) => jugador?.userId === usuario?.id);
   const esMiTurno = juegoPoker.currentPlayerTurn === juegoPoker.playerIndex;
-  // Solo mostramos botones cuando realmente te toca actuar.
+  // Solo mostramos botones cuando realmente te toca actuar
   const mostrarAccionesApuesta = !esEspectador && juegoPoker.gamePhase !== 'waiting' && esMiTurno;
 
   let clasePopupGanador = 'winner-popup';
@@ -765,10 +765,10 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
     });
   }
 
-  // Render principal de la mesa, acciones, chat e invitaciones
+  // Render principal de la mesa, acciones, chat e invitaciones en pantalla
   return (
     <div className="table-page">
-      {/* Popup ganador centrado en pantalla */}
+      {/* Popup ganador centrado en pantalla con datos de la mano */}
       {datosPopupGanador && (
         <div className={clasePopupGanador}>
           <div className="winner-popup__icono">{iconoPopupGanador}</div>
@@ -780,7 +780,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
         </div>
       )}
 
-      {/* Header con información de la mesa */}
+      {/* Header con informacion de la mesa y estado */}
       <div className="table-header">
         {!vistaCompacta && (
           <button className="btn-back" onClick={manejarSalirMesa}>
@@ -799,9 +799,9 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
           </div>
         </div>
 
-        {/* Botones de menú y chat */}
+        {/* Botones de menu y chat segun modo de pantalla */}
         <div className="menu-container">
-          {/* Chat: visible solo en pantallas grandes */}
+          {/* Chat: visible solo en pantallas grandes para no saturar mobile */}
           {!vistaCompacta && (
             <button
               className="btn-menu btn-chat"
@@ -822,10 +822,10 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
             <div className="menu-backdrop" onClick={() => setMostrarMenu(false)} />
           )}
           
-          {/* Dropdown del menú */}
+          {/* Dropdown del menu con acciones */}
           {mostrarMenu && (
             <div className="menu-dropdown">
-              {/* En modo compacto: Salir y Chat al principio del dropdown */}
+              {/* En modo compacto: Salir y Chat al principio del dropdown para acceso rapido */}
               {vistaCompacta && (
                 <>
                   <button
@@ -870,7 +870,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
         </div>
       </div>
 
-      {/* Mesa de poker + acciones en overlay */}
+      {/* Mesa de poker + acciones en overlay cuando es tu turno */}
       <div className="table-game-area">
         <MesaPoker
           maxPlayers={mesa.maxPlayers}
@@ -889,7 +889,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
           onEmptySeatClick={manejarAbrirInvitar}
         />
 
-        {/* Acciones: solo visibles cuando es tu turno */}
+        {/* Acciones: solo visibles cuando es tu turno para evitar errores */}
         {mostrarAccionesApuesta && (
           <AccionesApuesta
             playerChips={juegoPoker.playerChips}
@@ -911,7 +911,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
         )}
       </div>
 
-      {/* Panel de acciones */}
+      {/* Panel de acciones para espectador */}
       {esEspectador && (
         <div className="actions-panel">
           <button className="btn-action btn-rejoin" onClick={manejarSentarse}>
@@ -953,7 +953,7 @@ function PaginaPartida({ table: mesa, user: usuario, onNavigate: alNavegar, onUp
         </section>
       )}
 
-      {/* Modal de invitación a amigos */}
+      {/* Modal de invitacion a amigos con lista y estado online */}
       {mostrarModalInvitacion && (
         <>
           <div className="modal-overlay" onClick={() => setMostrarModalInvitacion(false)}></div>

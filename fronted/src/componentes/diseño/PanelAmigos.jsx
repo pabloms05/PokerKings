@@ -4,7 +4,7 @@ import { friendAPI } from '../../servicios/api';
 import { socketService } from '../../servicios/socketBase';
 
 function AmigosOffcanvas({ show, onHide }) {
-  // Estado del panel y ref para refrescar presencia
+  // Estado del panel: busqueda, listas y ref para refrescar presencia
   const [buscarAmigo, setBuscarAmigo] = useState('');
   const [amigos, setAmigos] = useState([]);
   const [pendientes, setPendientes] = useState([]);
@@ -13,12 +13,12 @@ function AmigosOffcanvas({ show, onHide }) {
   const [searchingUsers, setSearchingUsers] = useState(false);
   const friendsRef = useRef([]);
 
-  // Efectos: mantener ref con la lista actual de amigos
+  // Efectos: mantener ref con la lista actual para refrescar online
   useEffect(() => {
     friendsRef.current = amigos;
   }, [amigos]);
 
-  // Helpers: carga amigos, pendientes y estado online
+  // Helpers: carga amigos, pendientes y estado online con fallback
   const loadFriendsData = () => {
     setLoading(true);
 
@@ -70,7 +70,7 @@ function AmigosOffcanvas({ show, onHide }) {
     });
   };
 
-  // Efectos: carga inicial al abrir el panel
+  // Efectos: al abrir el panel, cargar datos y limpiar busqueda
   useEffect(() => {
     if (show) {
       loadFriendsData();
@@ -79,7 +79,7 @@ function AmigosOffcanvas({ show, onHide }) {
     }
   }, [show]);
 
-  // Efectos: busqueda con debounce para agregar amigos
+  // Efectos: busqueda con debounce para sugerencias sin spamear API
   useEffect(() => {
     if (!show) return;
 
@@ -122,7 +122,7 @@ function AmigosOffcanvas({ show, onHide }) {
     };
   }, [buscarAmigo, show]);
 
-  // Efectos: presencia en tiempo real y refresh periodico
+  // Efectos: presencia en tiempo real y refresh periodico para evitar estados viejos
   useEffect(() => {
     if (!show) return;
 
@@ -184,7 +184,7 @@ function AmigosOffcanvas({ show, onHide }) {
     };
   }, [show]);
 
-  // Handlers: enviar solicitudes, aceptar/rechazar y eliminar
+  // Handlers: enviar solicitudes, aceptar/rechazar y eliminar amigos
   const handleAgregarAmigo = () => {
     const target = buscarAmigo.trim();
     if (!target) return;
@@ -254,7 +254,7 @@ function AmigosOffcanvas({ show, onHide }) {
     );
   };
 
-  // Valores derivados: clases y contenido segun estado
+  // Valores derivados: clases y contenido segun carga, resultados y listas
   let claseOffcanvas = 'offcanvas offcanvas-start offcanvas-casino';
   if (show) {
     claseOffcanvas = 'offcanvas offcanvas-start offcanvas-casino show';
@@ -406,7 +406,7 @@ function AmigosOffcanvas({ show, onHide }) {
     );
   }
 
-  // Render del offcanvas con busqueda y listas
+  // Render del offcanvas con buscador, pendientes y lista de amigos
   return (
     <div 
       className={claseOffcanvas}
@@ -422,7 +422,7 @@ function AmigosOffcanvas({ show, onHide }) {
         ></button>
       </div>
       <div className="offcanvas-body">
-        {/* Buscador de amigos */}
+        {/* Buscador de amigos y resultados de busqueda */}
         <div className="mb-3">
           <label className="form-label">Agregar nuevo amigo</label>
           <div className="input-group">
@@ -451,7 +451,7 @@ function AmigosOffcanvas({ show, onHide }) {
 
         <hr />
 
-        {/* Lista de amigos */}
+        {/* Lista de amigos con estado online */}
         <h6>Mis amigos ({amigos.length})</h6>
         {contenidoAmigos}
       </div>

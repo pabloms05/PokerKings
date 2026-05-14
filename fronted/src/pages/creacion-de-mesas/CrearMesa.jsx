@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './CrearMesa.css';
 
 function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
-  // Estado del formulario de creacion de mesa
+  // Estado del formulario de creacion: nombre, blinds, bots y privacidad
   const [datosFormulario, setDatosFormulario] = useState({
     nombreMesa: '',
     maximoJugadores: 6,
@@ -11,19 +11,19 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
     esPrivada: true
   });
 
-  // Valores derivados para etiquetas y texto de ayuda
+  // Valores derivados para etiquetas, iconos y texto de ayuda segun privacidad
   const iconoTipoMesa = datosFormulario.esPrivada ? '🔒' : '🔓';
   const textoTipoMesa = datosFormulario.esPrivada ? 'Privada' : 'Pública';
   const textoAyudaTipo = datosFormulario.esPrivada
     ? 'Solo jugadores invitados pueden unirse'
     : 'Cualquiera puede unirse desde el lobby';
 
-  // Helpers: clase activa para botones de opciones
+  // Helpers: clases activas para botones de opciones
   const obtenerClaseBotonOpcion = (esActivo) => (
     esActivo ? 'btn-option active' : 'btn-option'
   );
 
-  // Handlers: cambios de inputs y envio del formulario
+  // Handlers: actualiza estado y envia datos al crear
   const manejarCambio = (evento) => {
     const { name, value } = evento.target;
 
@@ -51,7 +51,7 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
     });
   };
 
-  // Render del formulario y resumen
+  // Render del formulario, resumen y botones de accion
   return (
     <div className="create-table-page">
       <div className="create-container">
@@ -63,7 +63,7 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
         <p className="create-subtitle">Configura tu mesa personalizada</p>
 
         <form onSubmit={manejarEnvio} className="create-form">
-          {/* Nombre de la mesa */}
+          {/* Nombre de la mesa y validaciones basicas */}
           <div className="form-group">
             <label className="form-label">
               📝 Nombre de la Mesa
@@ -80,7 +80,7 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
             />
           </div>
 
-          {/* Número de jugadores */}
+          {/* Numero de jugadores disponible (4/6/8) */}
           <div className="form-group">
             <label className="form-label">
               👥 Número de Jugadores
@@ -99,7 +99,7 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
             </div>
           </div>
 
-          {/* Tipo de mesa: Pública/Privada */}
+          {/* Tipo de mesa: publica o privada, actualiza mensaje */}
           <div className="form-group">
             <label className="form-label">
               🔒 Tipo de Mesa
@@ -125,7 +125,7 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
             </p>
           </div>
 
-          {/* Ciegas */}
+          {/* Ciegas: seleccion de small/big blind */}
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">
@@ -164,7 +164,7 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
             </div>
           </div>
 
-          {/* Resumen */}
+          {/* Resumen de configuracion antes de crear */}
           <div className="summary-card">
             <h3 className="summary-title">📊 Resumen de Configuración</h3>
             <div className="summary-item">
@@ -185,7 +185,7 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
             </div>
           </div>
 
-          {/* Botones */}
+          {/* Botones: cancelar o crear mesa */}
           <div className="form-actions">
             <button 
               type="button" 

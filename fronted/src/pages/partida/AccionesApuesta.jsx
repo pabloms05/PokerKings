@@ -18,7 +18,7 @@ function AccionesApuesta({
   onRaise: alSubir,
   onAllIn: alIrAllIn
 }) {
-  // Valores derivados: limites seguros para apuestas
+  // Valores derivados: limites seguros para apuestas y subida
   const fichasJugadorSeguras = Math.max(0, Number(fichasJugador) || 0);
   const apuestaActualSegura = Math.max(0, Number(apuestaActual) || 0);
   const subidaMinimaSegura = Math.max(0, Number(subidaMinima) || 0);
@@ -36,11 +36,11 @@ function AccionesApuesta({
   const subidaMinimaPermitida = Math.min(fichasJugadorSeguras, subidaMinimaBase);
   const subidaMaximaPermitida = fichasJugadorSeguras;
 
-  // Estado local del slider de subida
+  // Estado local del slider de subida y monto seleccionado
   const [montoSubida, setMontoSubida] = useState(subidaMinimaPermitida);
   const [mostrarSliderSubida, setMostrarSliderSubida] = useState(false);
 
-  // Efectos: mantener monto dentro de limites
+  // Efectos: mantener monto dentro de limites al cambiar props
   useEffect(() => {
     setMontoSubida((previo) => {
       if (previo < subidaMinimaPermitida) return subidaMinimaPermitida;
@@ -55,7 +55,7 @@ function AccionesApuesta({
     }
   }, [mostrarSliderSubida, subidaMinimaPermitida]);
 
-  // Handlers: ajustar y confirmar acciones
+  // Handlers: ajustar monto y ejecutar acciones de apuesta
   const disminuirMontoSubida = () => {
     setMontoSubida((previo) => Math.max(subidaMinimaPermitida, previo - 1));
   };
@@ -80,7 +80,7 @@ function AccionesApuesta({
     alIrAllIn(fichasJugador);
   };
 
-  // Valores derivados de UI: clases y titulos segun estado
+  // Valores derivados de UI: clases y tooltips segun estado
   let claseContenedorAcciones = 'betting-actions-container';
   if (!esTurnoJugador) {
     claseContenedorAcciones = 'betting-actions-container disabled';
@@ -115,7 +115,7 @@ function AccionesApuesta({
     );
   }
 
-  // Render de acciones y slider de subida
+  // Render de acciones, slider y temporizador
   return (
     <div className={claseContenedorAcciones}>
       {!esTurnoJugador && (
@@ -139,9 +139,9 @@ function AccionesApuesta({
         </div>
       </div>
 
-      {/* Barra de botones SIEMPRE VISIBLE */}
+      {/* Barra de botones siempre visible, incluso cuando no es tu turno */}
       <div className="action-buttons" style={{ display: 'flex', position: 'relative', zIndex: 50 }}>
-          {/* Botón 1: No ir (Fold) */}
+          {/* Boton 1: retirar la mano (fold) y abandonar la apuesta */}
           <button
             className="btn-action btn-fold"
             onClick={alRetirarse}
@@ -151,7 +151,7 @@ function AccionesApuesta({
             🚫 No ir
           </button>
           
-          {/* Botón 2: Pasar (Check) - SIEMPRE VISIBLE */}
+          {/* Boton 2: pasar sin apostar si la regla lo permite */}
           <button 
             className="btn-action btn-check" 
             onClick={alPasar}
@@ -161,7 +161,7 @@ function AccionesApuesta({
             ✅ Pasar
           </button>
           
-          {/* Botón 3: Igualar (Call) */}
+          {/* Boton 3: igualar la apuesta actual (call) */}
           <button
             className="btn-action btn-call"
             onClick={alIgualar}
@@ -171,7 +171,7 @@ function AccionesApuesta({
             💵 Igualar {apuestaActual.toLocaleString()} PK
           </button>
           
-          {/* Botón 4: Subir (Raise) */}
+          {/* Boton 4: abrir slider para subir la apuesta */}
           <button
             className="btn-action btn-raise"
             onClick={() => {
@@ -185,7 +185,7 @@ function AccionesApuesta({
           </button>
         </div>
 
-      {/* Slider de subida */}
+      {/* Slider de subida: elige monto dentro de limites */}
       {mostrarSliderSubida && (
         <div className="raise-slider-container">
           <div className="slider-header">
@@ -244,7 +244,7 @@ function AccionesApuesta({
       <div className="turn-timer">
         <div className="timer-label">⏱️ Tiempo restante</div>
         <div className="timer-bar">
-          {/* FIX: Timer dinámico basado en turnTimeRemaining */}
+          {/* Timer dinamico: muestra porcentaje de tiempo restante */}
           <div 
             className="timer-fill" 
             style={{ width: `${(Math.max(0, tiempoRestanteTurno) / 45) * 100}%` }}

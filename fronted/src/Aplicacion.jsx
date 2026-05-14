@@ -17,7 +17,7 @@ import { addGameInvitation, removeGameInvitation } from './servicios/invitacione
 import { validateTableName } from './servicios/filtroNombreMesa'
 
 function Aplicacion() {
-  // Estado principal de la app: usuario autenticado, vista activa y mesa seleccionada
+  // Estado principal de la app: usuario autenticado, vista activa y mesa seleccionada que define la pantalla
   const [usuario, setUsuario] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [mostrarRegistro, setMostrarRegistro] = useState(false)
@@ -32,7 +32,7 @@ function Aplicacion() {
     return JSON.parse(textoMesaGuardada)
   })
 
-  // Carga inicial del perfil desde backend y sincroniza sessionStorage
+  // Carga inicial del perfil desde backend y sincroniza sessionStorage para mantener sesion en refresh
   useEffect(() => {
     const cargarDatos = () => {
       setCargando(true)
@@ -60,18 +60,18 @@ function Aplicacion() {
     cargarDatos()
   }, [])
 
-  // Handler: guarda usuario en estado tras login para habilitar navegacion
+  // Handler: guarda usuario en estado tras login para habilitar navbar y vistas protegidas
   const manejarInicioSesionExitoso = (usuarioLogueado) => {
     setUsuario(usuarioLogueado)
   }
 
-  // Handler: guarda usuario en estado y vuelve a login al completar registro
+  // Handler: guarda usuario en estado y vuelve a login al completar registro para evitar doble formulario
   const manejarRegistroExitoso = (usuarioRegistrado) => {
     setUsuario(usuarioRegistrado)
     setMostrarRegistro(false)
   }
 
-  // Handler: cerrar sesion, limpiar navegacion local y resetear vista/mesa
+  // Handler: cerrar sesion, limpiar sessionStorage y volver a inicio sin mesa activa
   const manejarCerrarSesion = () => {
     authService.logout()
     sessionStorage.removeItem('nav_view')
@@ -81,7 +81,7 @@ function Aplicacion() {
     setMesaActual(null)
   }
 
-  // Listener global: escucha auth:unauthorized y fuerza logout seguro
+  // Listener global: escucha auth:unauthorized y fuerza logout seguro cuando el token expira
   useEffect(() => {
     const onUnauthorized = () => {
       authService.logout()
@@ -95,7 +95,7 @@ function Aplicacion() {
     return () => window.removeEventListener('auth:unauthorized', onUnauthorized)
   }, []) // setters de useState son estables, no necesitan deps
 
-  // Handler: actualiza estado local y persiste avatar/chips en backend
+  // Handler: actualiza estado local y persiste avatar/chips en backend para consistencia
   const manejarActualizarUsuario = (usuarioActualizado) => {
     setUsuario(usuarioActualizado)
     sessionStorage.setItem('user', JSON.stringify(usuarioActualizado))
@@ -111,7 +111,7 @@ function Aplicacion() {
     )
   }
 
-  // Handler: navega entre vistas y persiste nav_view para refrescos
+  // Handler: navega entre vistas y persiste nav_view para mantener ruta al recargar
   const manejarNavegacion = (vista) => {
     sessionStorage.setItem('nav_view', vista)
     if (vista !== 'partida') {
@@ -121,7 +121,7 @@ function Aplicacion() {
     setVistaActual(vista)
   }
 
-  // Listener: recibe invitaciones realtime y muestra toast con accion de unirse
+  // Listener: recibe invitaciones realtime, guarda en memoria y ofrece unirse desde toast
   useEffect(() => {
     if (!usuario || !usuario.id) return;
 
@@ -196,7 +196,7 @@ function Aplicacion() {
     return () => socketService.offGameInvitation(manejarInvitacionPartida)
   }, [usuario?.id])
 
-  // Listener: navega a mesa cuando el panel confirma invitacion
+  // Listener: navega a mesa cuando el panel confirma invitacion y actualiza sessionStorage
   useEffect(() => {
     const onNavigateToInvitationTable = (event) => {
       const mesa = event?.detail?.table
@@ -212,7 +212,7 @@ function Aplicacion() {
     return () => window.removeEventListener('invitacion:abrir-mesa', onNavigateToInvitationTable)
   }, [])
 
-  // Handler: une a mesa, guarda sessionStorage y cambia a partida
+  // Handler: une a mesa en backend, guarda mesa en sessionStorage y cambia a partida
   const manejarUnirseMesa = (mesa, tokenInvitacion = null) => {
     console.log('Unirse a mesa:', mesa)
     return tableAPI.joinTable(mesa.id, tokenInvitacion).then(
@@ -231,7 +231,7 @@ function Aplicacion() {
     )
   }
 
-  // Handler: valida nombre, crea mesa y navega a partida
+  // Handler: valida nombre, crea mesa via API y navega a partida (o fallback local)
   const manejarCrearMesa = (datosFormulario) => {
     console.log('Creando mesa:', datosFormulario)
     const validacionNombre = validateTableName(datosFormulario.tableName)
@@ -290,7 +290,7 @@ function Aplicacion() {
     )
   }
 
-  // Render temprano: login/registro si no hay usuario autenticado
+  // Render temprano: muestra login/registro si no hay usuario autenticado
   if (!usuario) {
     let contenidoAcceso = (
       <InicioSesion
@@ -315,7 +315,7 @@ function Aplicacion() {
     )
   }
 
-  // Render principal: navbar y pagina segun vista actual
+  // Render principal: navbar y pagina segun vista actual y mesa seleccionada
   return (
     <div className="App">
       <Toaster 
@@ -349,7 +349,7 @@ function Aplicacion() {
       
       <Navbar user={usuario} onLogout={manejarCerrarSesion} onUpdateUser={manejarActualizarUsuario} onNavigate={manejarNavegacion} />
       
-      {/* Render de la vista actual segun navegacion */}
+      {/* Render de la vista actual segun navegacion (inicio, mesas, crear, partida, tienda) */}
       {vistaActual === 'inicio' && (
         <PaginaInicio onNavigate={manejarNavegacion} user={usuario} />
       )}

@@ -2,7 +2,7 @@ import React from 'react';
 import './Inicio.css';
 
 function PaginaInicio({ onNavigate: alNavegar, user }) {
-  // Valores derivados: progreso, nivel y experiencia
+  // Valores derivados: calcula progreso, nivel y experiencia actual
   const chips = Number(user?.chips) || 0;
   const level = Math.max(1, Number(user?.level) || 1);
   const experience = Math.max(0, Number(user?.experience) || 0);
@@ -13,10 +13,10 @@ function PaginaInicio({ onNavigate: alNavegar, user }) {
   const experienceRequired = Math.max(1, experienceNextLevel - experienceMinLevel);
   const progressPercent = Math.max(0, Math.min(100, (experienceInCurrentLevel / experienceRequired) * 100));
 
-  // Helpers: formateo de numeros para la UI
+  // Helpers: formatea numeros para mostrar fichas y XP
   const formatNumber = (value) => Number(value || 0).toLocaleString('es-ES');
 
-  // Render de la pantalla de inicio y progreso
+  // Render de inicio con acciones principales y panel de progreso
   return (
     <div className="home-page">
       <div className="home-content">

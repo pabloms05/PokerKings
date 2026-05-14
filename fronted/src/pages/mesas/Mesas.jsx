@@ -5,12 +5,12 @@ import { getGameInvitations, invitationsUpdateEvent } from '../../servicios/invi
 import './Mesas.css';
 
 function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: usuario }) {
-  // Estado del lobby (mesas, carga e invitaciones)
+  // Estado del lobby: lista de mesas, carga e invitaciones
   const [mesas, setMesas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [invitaciones, setInvitaciones] = useState([]);
 
-  // Efectos: mantener invitaciones sincronizadas en memoria
+  // Efectos: mantener invitaciones sincronizadas en memoria del cliente
   useEffect(() => {
     const actualizarInvitaciones = () => {
       setInvitaciones(getGameInvitations());
@@ -21,7 +21,7 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
     return () => window.removeEventListener(invitationsUpdateEvent, actualizarInvitaciones);
   }, []);
 
-  // Efectos: cargar mesas y suscribirse al lobby en tiempo real
+  // Efectos: carga inicial y suscripcion a lobby en tiempo real
   useEffect(() => {
     const cargarMesas = () => {
       setCargando(true);
@@ -63,7 +63,7 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
     };
   }, []);
 
-  // Valores derivados: textos segun cantidad de mesas
+  // Valores derivados: textos segun cantidad de mesas disponibles
   let sufijoMesa = 's';
   let sufijoDisponible = 's';
   if (mesas.length === 1) {
@@ -87,7 +87,7 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
   } else {
     contenidoPrincipal = (
       <>
-        {/* Scroll horizontal de mesas */}
+        {/* Scroll horizontal de mesas para mobile */}
         <div className="tables-scroll-container">
           <div className="tables-scroll">
             {mesas.map((mesa) => {
@@ -147,7 +147,7 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
                   </div>
 
                   <div className="table-card-body">
-                    {/* Mini mesa visual */}
+                    {/* Mini mesa visual con contador de jugadores */}
                     <div className="mini-table">
                       <img src="/assets/images/mesa-poker.png" alt="Mesa" />
                       <div className="player-count">
@@ -155,7 +155,7 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
                       </div>
                     </div>
 
-                    {/* Información */}
+                    {/* Informacion de mesa: jugadores, ciegas, buy-in */}
                     <div className="table-info">
                       <div className="info-row">
                         <span className="info-label">👥 Jugadores:</span>
@@ -175,7 +175,7 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
                       </div>
                     </div>
 
-                    {/* Botón unirse */}
+                    {/* Boton unirse con reglas de deshabilitado */}
                     <button
                       className={claseBotonUnirse}
                       onClick={() => {
@@ -195,7 +195,7 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
           </div>
         </div>
 
-        {/* Indicador de scroll */}
+        {/* Indicador para sugerir desplazamiento */}
         <div className="scroll-hint">
           ← Desliza para ver más mesas →
         </div>
@@ -203,7 +203,7 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
     );
   }
 
-  // Render del lobby y tarjetas de mesas
+  // Render del lobby y tarjetas con botones de unirse
   return (
     <div className="lobby-page">
       <div className="lobby-header">
