@@ -73,7 +73,11 @@ function PokerTable({
     const actualizarEscala = () => {
       if (!referenciaWrapper.current) return;
       const anchoDisponible = referenciaWrapper.current.offsetWidth;
-      const nuevaEscala = Math.min(anchoDisponible / anchoBase, 1);
+      const alturaViewport = typeof window !== 'undefined'
+        ? (window.visualViewport?.height || window.innerHeight || altoBase)
+        : altoBase;
+      const altoDisponible = esMovilVertical ? Math.max(0, alturaViewport - 120) : altoBase;
+      const nuevaEscala = Math.min(anchoDisponible / anchoBase, altoDisponible / altoBase, 1);
       setEscala(nuevaEscala);
     };
 

@@ -4,11 +4,15 @@
   border-bottom: 3px solid #daa520;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
   padding: 0.15rem 1rem !important;
+  position: relative;
+  z-index: 1030;
 }
 
 .navbar-casino .container-fluid {
   padding-top: 0;
   padding-bottom: 0;
+  align-items: flex-start;
+  gap: 0.75rem;
 }
 
 .navbar-casino .navbar-brand {
@@ -22,30 +26,6 @@
 .navbar-casino .navbar-brand:hover {
   color: #ffd700 !important;
   transform: scale(1.05);
-}
-
-/* En pantallas lg+: asegurar que los items no hagan wrap */
-@media (min-width: 992px) {
-  .navbar-casino .navbar-nav {
-    flex-wrap: nowrap;
-    align-items: center;
-  }
-}
-
-/* En pantallas < lg: menú expandido en columna */
-@media (max-width: 991.98px) {
-  .navbar-casino .navbar-collapse.show {
-    padding: 0.5rem 0;
-  }
-  .navbar-casino .navbar-nav {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .navbar-casino .nav-link {
-    padding: 8px 15px !important;
-    margin: 2px 0;
-    font-size: 0.9rem !important;
-  }
 }
 
 .navbar-casino .nav-link {
@@ -197,6 +177,30 @@
   color: #a0a0a0 !important;
 }
 
+/* En pantallas lg+: asegurar que los items no hagan wrap */
+@media (min-width: 992px) {
+  .navbar-casino .navbar-nav {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+}
+
+/* En pantallas < lg: menú expandido en columna */
+@media (max-width: 991.98px) {
+  .navbar-casino .navbar-collapse.show {
+    padding: 0.5rem 0;
+  }
+  .navbar-casino .navbar-nav {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .navbar-casino .nav-link {
+    padding: 8px 15px !important;
+    margin: 2px 0;
+    font-size: 0.9rem !important;
+  }
+}
+
 /* Media queries para móviles en landscape */
 @media (max-width: 1199px) and (min-width: 576px) and (orientation: landscape) {
   .navbar-casino .navbar-nav {
@@ -222,7 +226,11 @@
 /* Ajustes para pantallas muy pequeñas en landscape */
 @media (max-width: 767px) and (orientation: landscape) {
   .navbar-casino {
-    padding: 0.1rem 0.5rem !important;
+    padding: 0.1rem 0.7rem !important;
+  }
+
+  .navbar-casino .container-fluid {
+    gap: 0;
   }
 
   .navbar-casino .nav-link {
@@ -231,6 +239,6 @@
   }
 
   .navbar-casino .navbar-brand img {
-    height: 60px !important;
+    height: 58px !important;
   }
 }

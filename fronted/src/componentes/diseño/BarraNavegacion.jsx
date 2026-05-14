@@ -113,12 +113,6 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
     ), { duration: 5000, id: 'logout-confirm' });
   };
 
-  // Valores derivados: clase del menu colapsado
-  let claseMenuNavegacion = 'navbar-collapse collapse';
-  if (navbarExpanded) {
-    claseMenuNavegacion = 'navbar-collapse show';
-  }
-
   // Render de navbar, offcanvas y modal de cuenta
   return (
     <>
@@ -140,7 +134,7 @@ function Navbar({ user, onLogout, onUpdateUser, onNavigate }) {
             <span className="navbar-toggler-icon"></span>
           </button>
 
-          <div className={claseMenuNavegacion} id="navbarNav">
+          <div className={`navbar-collapse collapse${navbarExpanded ? ' show' : ''}`} id="navbarNav">
             <ul className="navbar-nav ms-auto">
               {/* 1. Inicio */}
               <li className="nav-item">
