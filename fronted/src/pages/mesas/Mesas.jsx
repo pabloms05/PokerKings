@@ -169,7 +169,6 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
                         <span className="info-label">🎟️ Buy-in:</span>
                         <span className="info-value">{compraEntrada}</span>
                       </div>
-                      {filaBots}
                       <div className="info-row">
                         <span className="info-label">🔐 Tipo:</span>
                         <span className="info-value">{tipoMesaTexto}</span>
