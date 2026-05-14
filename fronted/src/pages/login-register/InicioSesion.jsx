@@ -157,39 +157,6 @@ function InicioSesion({ alIniciarSesionExito, alCambiarARegistro }) {
             Crear Cuenta Nueva
           </button>
         </div>
-
-        {/* Login rapido para pruebas locales */}
-        <div className="quick-login">
-          <div className="divider">
-            <span>🧪 Pruebas rápidas:</span>
-          </div>
-          <div className="quick-login-buttons">
-            <button
-              className="btn-quick"
-              onClick={() => manejarLoginRapido(1)}
-              disabled={cargando}
-            >
-              Jugador 1
-            </button>
-            <button
-              className="btn-quick"
-              onClick={() => manejarLoginRapido(2)}
-              disabled={cargando}
-            >
-              Jugador 2
-            </button>
-            <button
-              className="btn-quick"
-              onClick={() => manejarLoginRapido(3)}
-              disabled={cargando}
-            >
-              Jugador 3
-            </button>
-          </div>
-          <p className="quick-login-hint">
-            (jugador1@pokerkings.com / password123)
-          </p>
-        </div>
       </div>
     </div>
   );
