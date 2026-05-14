@@ -58,7 +58,7 @@ export const getTable = async (req, res) => {
 
 export const createTable = async (req, res) => {
   try {
-    const { name, smallBlind, bigBlind, maxPlayers, isPrivate, tableColor, botsCount } = req.body;
+    const { name, smallBlind, bigBlind, maxPlayers, isPrivate, tableColor } = req.body;
     const validation = validateTableNameModeration(name);
     if (!validation.isValid) {
       return res.status(400).json({
@@ -73,8 +73,7 @@ export const createTable = async (req, res) => {
       bigBlind,
       maxPlayers: maxPlayers || 6,
       isPrivate: isPrivate || false,
-      tableColor: tableColor || '#1a4d2e',
-      botsCount: botsCount || 0
+      tableColor: tableColor || '#1a4d2e'
     });
 
     try {

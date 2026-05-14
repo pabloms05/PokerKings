@@ -57,8 +57,7 @@ const createTestUsers = async () => {
         highestWinning: 1000,
         totalWinnings: 5000,
         gamesPlayed: 25,
-      gamesWon: 8,
-      isBot: false
+      gamesWon: 8
     });
 
     const user2 = await User.create({
@@ -72,8 +71,7 @@ const createTestUsers = async () => {
       highestWinning: 500,
       totalWinnings: 2000,
       gamesPlayed: 15,
-      gamesWon: 4,
-      isBot: false
+      gamesWon: 4
     });
 
     const user3 = await User.create({
@@ -87,10 +85,10 @@ const createTestUsers = async () => {
       highestWinning: 3000,
       totalWinnings: 15000,
       gamesPlayed: 60,
-      gamesWon: 25,
-      isBot: false
-      
-      console.log('\n👤 Usuario 2:');
+      gamesWon: 25
+    });
+
+    console.log('\n👤 Usuario 2:');
       console.log('  📧 Email:    jugador2@pokerkings.com');
       console.log('  🔑 Password: password123');
       console.log('  💰 Chips:    3000');

@@ -252,7 +252,6 @@ export const searchUsersForFriendRequest = async (req, res) => {
 
     const candidates = await User.findAll({
       where: {
-        isBot: false,
         username: { [Op.iLike]: `%${query}%` }
       },
       attributes: ['id', 'username', 'avatar'],

@@ -6,7 +6,6 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
   const [datosFormulario, setDatosFormulario] = useState({
     nombreMesa: '',
     maximoJugadores: 6,
-    bots: 0,
     ciegaPequena: 10,
     ciegaGrande: 20,
     esPrivada: true
@@ -18,7 +17,6 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
   const textoAyudaTipo = datosFormulario.esPrivada
     ? 'Solo jugadores invitados pueden unirse'
     : 'Cualquiera puede unirse desde el lobby';
-  const sufijoBots = datosFormulario.bots === 1 ? '' : 's';
 
   // Helpers: clase activa para botones de opciones
   const obtenerClaseBotonOpcion = (esActivo) => (
@@ -47,7 +45,6 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
     alCrear({
       tableName: datosFormulario.nombreMesa,
       maxPlayers: datosFormulario.maximoJugadores,
-      bots: datosFormulario.bots,
       smallBlind: datosFormulario.ciegaPequena,
       bigBlind: datosFormulario.ciegaGrande,
       isPrivate: datosFormulario.esPrivada
@@ -128,30 +125,6 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
             </p>
           </div>
 
-          {/* Número de bots */}
-          <div className="form-group">
-            <label className="form-label">
-              🤖 Número de Bots
-            </label>
-            <div className="slider-container">
-              <input
-                type="range"
-                name="bots"
-                min="0"
-                max={datosFormulario.maximoJugadores - 1}
-                value={datosFormulario.bots}
-                onChange={manejarCambio}
-                className="form-slider"
-              />
-              <div className="slider-value">
-                {datosFormulario.bots} bot{sufijoBots}
-              </div>
-            </div>
-            <p className="form-hint">
-              Los bots rellenarán asientos vacíos automáticamente
-            </p>
-          </div>
-
           {/* Ciegas */}
           <div className="form-row">
             <div className="form-group">
@@ -205,10 +178,6 @@ function PaginaCrearMesa({ onNavigate: alNavegar, onCreate: alCrear }) {
             <div className="summary-item">
               <span>Jugadores:</span>
               <strong>{datosFormulario.maximoJugadores} asientos</strong>
-            </div>
-            <div className="summary-item">
-              <span>Bots:</span>
-              <strong>{datosFormulario.bots}</strong>
             </div>
             <div className="summary-item">
               <span>Ciegas:</span>

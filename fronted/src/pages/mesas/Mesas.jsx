@@ -135,16 +135,6 @@ function PaginaMesas({ onNavigate: alNavegar, onJoinTable: alUnirseMesa, user: u
                 textoBotonUnirse = '🔒 Solo invitación';
               }
 
-              let filaBots = null;
-              if (mesa.botsCount > 0) {
-                filaBots = (
-                  <div className="info-row">
-                    <span className="info-label">🤖 Bots:</span>
-                    <span className="info-value">{mesa.botsCount}</span>
-                  </div>
-                );
-              }
-
               return (
                 <div key={mesa.id} className="table-card">
                   <div className="table-card-header">

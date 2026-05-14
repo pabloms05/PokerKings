@@ -245,16 +245,14 @@ function Aplicacion() {
       smallBlind: datosFormulario.smallBlind,
       bigBlind: datosFormulario.bigBlind,
       maxPlayers: datosFormulario.maxPlayers,
-      isPrivate: datosFormulario.isPrivate,
-      botsCount: datosFormulario.bots
+      isPrivate: datosFormulario.isPrivate
     }
 
     tableAPI.createTable(datosMesa).then(
       (respuestaCreacion) => {
         const mesaCreada = {
           ...respuestaCreacion.data,
-          players: [usuario],
-          botsCount: datosFormulario.bots
+          players: [usuario]
         }
 
         sessionStorage.setItem('nav_table', JSON.stringify(mesaCreada))

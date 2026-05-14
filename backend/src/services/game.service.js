@@ -12,7 +12,6 @@ import {
   getActivePlayersCount,
   removeFoldedPlayerFromPots
 } from './sidepots.service.js';
-import { executeBotTurn } from './bot.ai.js';
 import { processHandProgression } from './progression.service.js';
 
 // Palos de cartas
@@ -1142,29 +1141,6 @@ export const processPlayerAction = async (game, playerId, action, amount = 0) =>
       gameState: await getGameState(game.id, false)
     };
 
-    // Check if next player is a bot after phase advance
-    try {
-      const nextPlayerIndex = game.currentPlayerIndex;
-      const nextPlayer = game.players[nextPlayerIndex];
-      if (nextPlayer) {
-        const nextUser = await User.findByPk(nextPlayer.userId);
-        
-        if (nextUser?.isBot && game.status === 'active') {
-          console.log(`[BOT] Auto-executing turn for bot: ${nextUser.username} (after phase advance)`);
-          // Execute bot turn with 1 second delay
-          setTimeout(async () => {
-            try {
-              await executeBotTurn(game.id);
-            } catch (botError) {
-              console.error('[BOT] Error executing bot turn:', botError.message);
-            }
-          }, 1000);
-        }
-      }
-    } catch (botCheckError) {
-      console.error('[BOT] Error checking if next player is bot:', botCheckError.message);
-    }
-
     return result;
   }
 
@@ -1182,31 +1158,6 @@ export const processPlayerAction = async (game, playerId, action, amount = 0) =>
     nextPlayer: players[nextIndex],
     gameState: await getGameState(game.id, false)
   };
-
-  // Check if next player is a bot and execute automatically
-  try {
-    const nextPlayer = players[nextIndex];
-    const nextUser = await User.findByPk(nextPlayer.userId);
-    
-    console.log(`[DEBUG] Siguiente jugador: ${nextUser?.username}, isBot: ${nextUser?.isBot}`);
-    
-    if (nextUser?.isBot && game.status === 'active') {
-      console.log(`[BOT] Auto-executing turn for bot: ${nextUser.username}`);
-      // Execute bot turn with 1 second delay
-      setTimeout(async () => {
-        try {
-          console.log(`[BOT] Ejecutando ejecuteBotTurn para ${nextUser.username}`);
-          await executeBotTurn(game.id);
-        } catch (botError) {
-          console.error('[BOT] Error executing bot turn:', botError.message);
-        }
-      }, 1000);
-    } else {
-      console.log(`[DEBUG] No es bot o juego no activo. isBot: ${nextUser?.isBot}, status: ${game.status}`);
-    }
-  } catch (botCheckError) {
-    console.error('[BOT] Error checking if next player is bot:', botCheckError.message);
-  }
 
   return result;
 };

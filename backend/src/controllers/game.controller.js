@@ -33,10 +33,6 @@ const chargeBuyInForUser = async (userId, tableBuyIn) => {
     throw new Error('Usuario no encontrado');
   }
 
-  if (user.isBot) {
-    return user;
-  }
-
   const available = Math.max(0, parseInt(user.chips, 10) || 0);
   if (available < tableBuyIn) {
     const err = new Error('Fichas insuficientes para sentarse en la mesa');
@@ -411,41 +407,15 @@ export const startGame = async (req, res) => {
       });
     }
 
-    // Agregar bots según la configuración de la mesa
-    const botsToAdd = table.botsCount || 0;
-    
-    if (botsToAdd > 0) {
-      console.log(`⚠️  Agregando ${botsToAdd} bots según configuración de la mesa...`);
-      
-      // Buscar usuarios bot disponibles
-      const availablePlayers = await User.findAll({
-        where: { 
-          id: { [Op.notIn]: playerIds },
-          isBot: true  // Solo bots reales
-        },
-        limit: botsToAdd,
-        order: [['createdAt', 'ASC']]
-      });
-
-      // Agregar los bots
-      for (let i = 0; i < Math.min(availablePlayers.length, botsToAdd); i++) {
-        playerIds.push(availablePlayers[i].id);
-      }
-
-      console.log(`✅ ${Math.min(availablePlayers.length, botsToAdd)} bots agregados. Total jugadores: ${playerIds.length}`);
-    }
-
     // Obtener datos de los jugadores (chips de su cuenta)
     const players = await User.findAll({
       where: { id: playerIds },
-      attributes: ['id', 'chips', 'isBot']
+      attributes: ['id', 'chips']
     });
 
-    // Cobrar buy-in para cada jugador humano que se sienta al crear/activar juego.
+    // Cobrar buy-in para cada jugador que se sienta al crear/activar juego.
     for (const player of players) {
-      if (!player.isBot) {
-        await chargeBuyInForUser(player.id, tableBuyIn);
-      }
+      await chargeBuyInForUser(player.id, tableBuyIn);
     }
 
     if (players.length < 2) {
