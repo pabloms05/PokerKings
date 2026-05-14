@@ -239,9 +239,38 @@ const startNextHand = async (game) => {
   const bigBlindAmount = table.bigBlind;
 
   const players = JSON.parse(JSON.stringify(game.players || []));
+  const pendingPlayers = Array.isArray(game.pendingPlayers)
+    ? JSON.parse(JSON.stringify(game.pendingPlayers))
+    : (typeof game.pendingPlayers === 'string'
+        ? JSON.parse(game.pendingPlayers || '[]')
+        : []);
+
+  const queuedFromPlayers = players.filter((p) => p.waitForNextHand);
+  const queuedPlayers = [...pendingPlayers, ...queuedFromPlayers]
+    .filter((player, index, arr) => index === arr.findIndex(p => p.userId === player.userId))
+    .map((p) => ({
+      ...p,
+      isSittingOut: false,
+      waitForNextHand: false,
+      folded: false,
+      lastAction: null,
+      betInPhase: 0,
+      committed: 0,
+      hand: null,
+      holeCards: null
+    }));
+
+  const activePlayersBase = players
+    .filter((p) => !p.waitForNextHand)
+    .map((p) => ({
+      ...p,
+      waitForNextHand: false
+    }));
+
+  const allPlayers = [...activePlayersBase, ...queuedPlayers];
 
   // Reset estado por jugador
-  players.forEach((p) => {
+  allPlayers.forEach((p) => {
     p.folded = false;
     p.lastAction = null;
     p.betInPhase = 0;
@@ -249,13 +278,13 @@ const startNextHand = async (game) => {
   });
 
   // Rotar dealer
-  const currentDealerIndex = players.findIndex(p => p.userId === game.dealerId);
-  const dealerIndex = getNextDealerPosition(currentDealerIndex >= 0 ? currentDealerIndex : 0, players.length);
-  const positions = calculatePositions(players, dealerIndex);
+  const currentDealerIndex = allPlayers.findIndex(p => p.userId === game.dealerId);
+  const dealerIndex = getNextDealerPosition(currentDealerIndex >= 0 ? currentDealerIndex : 0, allPlayers.length);
+  const positions = calculatePositions(allPlayers, dealerIndex);
 
   // Crear mazo y repartir cartas
   const deck = createDeck();
-  players.forEach((p) => {
+  allPlayers.forEach((p) => {
     if (p.chips > 0 && !p.isSittingOut) {
       p.hand = [deck.pop(), deck.pop()];
       p.holeCards = [...p.hand];
@@ -270,25 +299,25 @@ const startNextHand = async (game) => {
   // Aplicar blinds
   const sbIndex = positions.smallBlindIndex;
   const bbIndex = positions.bigBlindIndex;
-  const sbAmount = Math.min(smallBlindAmount, players[sbIndex].chips);
-  const bbAmount = Math.min(bigBlindAmount, players[bbIndex].chips);
+  const sbAmount = Math.min(smallBlindAmount, allPlayers[sbIndex].chips);
+  const bbAmount = Math.min(bigBlindAmount, allPlayers[bbIndex].chips);
 
-  players[sbIndex].chips -= sbAmount;
-  players[sbIndex].committed = sbAmount;
-  players[sbIndex].betInPhase = sbAmount;
-  players[bbIndex].chips -= bbAmount;
-  players[bbIndex].committed = bbAmount;
-  players[bbIndex].betInPhase = bbAmount;
+  allPlayers[sbIndex].chips -= sbAmount;
+  allPlayers[sbIndex].committed = sbAmount;
+  allPlayers[sbIndex].betInPhase = sbAmount;
+  allPlayers[bbIndex].chips -= bbAmount;
+  allPlayers[bbIndex].committed = bbAmount;
+  allPlayers[bbIndex].betInPhase = bbAmount;
 
-  const currentPlayerIndex = players.length === 2
+  const currentPlayerIndex = allPlayers.length === 2
     ? dealerIndex
-    : (positions.bigBlindIndex + 1) % players.length;
+    : (positions.bigBlindIndex + 1) % allPlayers.length;
 
   game.status = 'active';
   game.phase = 'preflop';
-  game.dealerId = players[dealerIndex].userId;
-  game.smallBlindId = players[sbIndex].userId;
-  game.bigBlindId = players[bbIndex].userId;
+  game.dealerId = allPlayers[dealerIndex].userId;
+  game.smallBlindId = allPlayers[sbIndex].userId;
+  game.bigBlindId = allPlayers[bbIndex].userId;
   game.currentPlayerIndex = currentPlayerIndex;
   game.currentBet = bbAmount;
   game.pot = sbAmount + bbAmount;
@@ -299,8 +328,10 @@ const startNextHand = async (game) => {
   game.winnerIds = null;
   game.winners = null;
   game.endTime = null;
-  game.players = players;
+  game.players = allPlayers;
+  game.pendingPlayers = [];
   game.changed('players', true);
+  game.changed('pendingPlayers', true);
 
   await game.save();
 };
@@ -357,8 +388,9 @@ const dealCommunityForNextPhase = (game, nextPhase) => {
 
 /**
  * Determinar si sólo queda un jugador activo
+ * Excluir jugadores que están sitting out (no participan en la mano actual)
  */
-const getActivePlayers = (players) => players.filter(p => !p.folded);
+const getActivePlayers = (players) => players.filter(p => !p.folded && !p.isSittingOut && !p.waitForNextHand);
 
 const normalizeBustedPlayersToSittingOut = (players) => {
   if (!Array.isArray(players)) return [];
@@ -425,7 +457,7 @@ const finishByFold = async (game) => {
   game.changed('players', true);
 
   // ¿Hay suficientes jugadores con fichas para seguir?
-  const playersWithChips = game.players.filter(p => p.chips > 0 && !p.isSittingOut);
+  const playersWithChips = game.players.filter(p => p.chips > 0 && (!p.isSittingOut || p.waitForNextHand));
   if (playersWithChips.length >= 2) {
     await startNextHand(game);
     return {
@@ -630,7 +662,7 @@ const finishShowdown = async (game) => {
   game.changed('players', true);
 
   // ¿Hay suficientes jugadores con fichas para seguir?
-  const playersWithChips = game.players.filter(p => p.chips > 0 && !p.isSittingOut);
+  const playersWithChips = game.players.filter(p => p.chips > 0 && (!p.isSittingOut || p.waitForNextHand));
   if (playersWithChips.length >= 2) {
     let potWon = winners.reduce((sum, w) => sum + (w.chipsWon || 0), 0);
     if (potWon === 0) {
@@ -722,6 +754,11 @@ export const validateAction = (game, playerId, action, amount = 0) => {
   // Verificar que el jugador no está folded
   if (currentPlayer.folded) {
     throw new Error('Ya hiciste fold en esta mano');
+  }
+
+  // Verificar que el jugador realmente está en juego para esta mano
+  if (currentPlayer.isSittingOut || currentPlayer.waitForNextHand) {
+    throw new Error('Debes esperar a la siguiente mano para jugar');
   }
 
   // Convertir a números para evitar comparaciones de strings
@@ -886,16 +923,16 @@ export const processPlayerAction = async (game, playerId, action, amount = 0) =>
 
   console.log('[DEBUG][NEXT_PLAYER] Starting nextIndex:', nextIndex, 'startIndex:', startIndex);
 
-  // Saltar jugadores folded o all-in (sin chips para actuar)
-  while (players[nextIndex].folded || players[nextIndex].chips === 0) {
-    console.log('[DEBUG][NEXT_PLAYER] Skipping player', nextIndex, '- folded:', players[nextIndex].folded, 'chips:', players[nextIndex].chips);
+  // Saltar jugadores folded, sitting out o all-in (sin chips para actuar)
+  while (players[nextIndex].isSittingOut || players[nextIndex].folded || players[nextIndex].chips === 0) {
+    console.log('[DEBUG][NEXT_PLAYER] Skipping player', nextIndex, '- folded:', players[nextIndex].folded, 'isSittingOut:', players[nextIndex].isSittingOut, 'chips:', players[nextIndex].chips);
     nextIndex = (nextIndex + 1) % players.length;
     if (nextIndex === startIndex) {
       console.log('[DEBUG][NEXT_PLAYER] Full circle! nextIndex === startIndex');
-      const nonFoldedPlayers = players.filter(p => !p.folded);
+      const nonFoldedPlayers = players.filter(p => !p.folded && !p.isSittingOut);
       const pendingPlayers = players
         .map((p, idx) => ({ p, idx }))
-        .filter(({ p }) => (parseInt(p.chips) || 0) > 0 && p.lastAction == null);
+        .filter(({ p }) => !p.isSittingOut && !p.folded && (parseInt(p.chips) || 0) > 0 && p.lastAction == null);
 
       if (nonFoldedPlayers.length === 1) {
         const soleRemaining = nonFoldedPlayers[0];
@@ -997,7 +1034,7 @@ export const processPlayerAction = async (game, playerId, action, amount = 0) =>
   if (activePlayers.length === 1) {
     const soleRemaining = activePlayers[0];
     const pendingOthers = players.filter(
-      p => (parseInt(p.chips) || 0) > 0 && p.lastAction == null && p.userId !== soleRemaining.userId
+      p => !p.isSittingOut && !p.folded && (parseInt(p.chips) || 0) > 0 && p.lastAction == null && p.userId !== soleRemaining.userId
     );
 
     if (pendingOthers.length > 0) {
@@ -1051,7 +1088,7 @@ export const processPlayerAction = async (game, playerId, action, amount = 0) =>
     await game.save();
     console.log(`[DEBUG][SAVE] Game ${game.id} saved with ${game.players?.length || 0} players`);
 
-    const activePlayers = players.filter(p => !p.folded);
+    const activePlayers = players.filter(p => !p.folded && !p.isSittingOut);
     const playersWithChips = activePlayers.filter(p => p.chips > 0);
     const allInPlayers = activePlayers.filter(p => p.chips === 0 && (p.betInPhase || p.committed) > 0);
     const pendingPlayersWithChips = activePlayers.filter(p => p.chips > 0 && !p.lastAction);
@@ -1192,7 +1229,7 @@ export const getGameState = async (gameId, autoShowdown = true) => {
   // Si el juego está activo y todos excepto 1 jugador están all-in, hacer showdown automáticamente
   // PERO solo si autoShowdown es true (no se ejecuta durante processPlayerAction)
   if (autoShowdown && game.status === 'active') {
-    const activePlayers = game.players.filter(p => !p.folded);
+    const activePlayers = game.players.filter(p => !p.folded && !p.isSittingOut && !p.waitForNextHand);
     const playersWithChips = activePlayers.filter(p => p.chips > 0);
 
     if (playersWithChips.length <= 1 && activePlayers.length > 1 && game.phase !== 'showdown') {
@@ -1225,6 +1262,12 @@ export const getGameState = async (gameId, autoShowdown = true) => {
     usersMap[u.id] = u;
   });
 
+  const hideQueuedPlayers = game.status === 'active' && game.phase !== 'waiting';
+  const visiblePlayers = hideQueuedPlayers
+    ? game.players.filter(p => !p.waitForNextHand && !p.isSittingOut)
+    : game.players;
+  const currentPlayer = game.players[game.currentPlayerIndex] || null;
+
   return {
     id: game.id,
     tableId: game.tableId,
@@ -1235,7 +1278,7 @@ export const getGameState = async (gameId, autoShowdown = true) => {
     communityCards: communityCards,
     currentBet: parseInt(game.currentBet) || 0,
     currentPlayerIndex: game.currentPlayerIndex,
-    players: game.players.map((p, idx) => {
+    players: visiblePlayers.map((p, idx) => {
       const user = usersMap[p.userId];
       return {
         userId: p.userId,
@@ -1247,14 +1290,14 @@ export const getGameState = async (gameId, autoShowdown = true) => {
         isSittingOut: !!p.isSittingOut,
         lastAction: p.lastAction || null,
         betInPhase: p.betInPhase || 0,
-        isCurrentPlayer: idx === game.currentPlayerIndex,
+        isCurrentPlayer: !!currentPlayer && p.userId === currentPlayer.userId,
         holeCards: p.holeCards || [],
         cardsHidden: true // Las cartas se ven según permisos
       };
     }),
-    dealerIndex: game.players.findIndex(p => p.userId === game.dealerId),
-    smallBlindIndex: game.players.findIndex(p => p.userId === game.smallBlindId),
-    bigBlindIndex: game.players.findIndex(p => p.userId === game.bigBlindId),
+    dealerIndex: visiblePlayers.findIndex(p => p.userId === game.dealerId),
+    smallBlindIndex: visiblePlayers.findIndex(p => p.userId === game.smallBlindId),
+    bigBlindIndex: visiblePlayers.findIndex(p => p.userId === game.bigBlindId),
     winner: game.winner || null,
     winners: game.winners || [],
     winnerIds: game.winnerIds || [],

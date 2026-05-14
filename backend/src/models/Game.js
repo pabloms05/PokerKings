@@ -68,6 +68,11 @@ const Game = sequelize.define('Game', {
     defaultValue: [],
     comment: 'Array of {userId, chips, committed, hand} objects in order'
   },
+  pendingPlayers: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    comment: 'Players that joined during an active hand and will enter on the next hand'
+  },
   currentBet: {
     type: DataTypes.BIGINT,
     defaultValue: 0,

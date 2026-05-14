@@ -222,20 +222,24 @@ export const startGame = async (req, res) => {
       const gamePlayers = typeof activeGame.players === 'string' 
         ? JSON.parse(activeGame.players || '[]')
         : (activeGame.players || []);
+      const pendingPlayers = typeof activeGame.pendingPlayers === 'string'
+        ? JSON.parse(activeGame.pendingPlayers || '[]')
+        : (activeGame.pendingPlayers || []);
       
       const newPlayerId = playerIds[0];
       const userInGameIndex = gamePlayers.findIndex(p => p.userId === newPlayerId);
       const activeSeats = gamePlayers.filter(p => !p.isSittingOut).length;
       const userAlreadyInGame = userInGameIndex !== -1;
+      const occupiedSeats = activeSeats + pendingPlayers.length;
       
       if (userAlreadyInGame) {
         // Si estaba sentado fuera, permitir reingreso para la siguiente mano
         if (gamePlayers[userInGameIndex]?.isSittingOut) {
           await chargeBuyInForUser(newPlayerId, tableBuyIn);
 
-          // Al reingresar a la mesa se usa un stack fresco de buy-in
-          gamePlayers[userInGameIndex].chips = tableBuyIn;
-          gamePlayers[userInGameIndex].isSittingOut = false;
+          gamePlayers[userInGameIndex].chips = 0;
+          gamePlayers[userInGameIndex].isSittingOut = true;
+          gamePlayers[userInGameIndex].waitForNextHand = true;
           gamePlayers[userInGameIndex].folded = true;
           gamePlayers[userInGameIndex].hand = null;
           gamePlayers[userInGameIndex].holeCards = null;
@@ -243,8 +247,24 @@ export const startGame = async (req, res) => {
           gamePlayers[userInGameIndex].betInPhase = 0;
           gamePlayers[userInGameIndex].lastAction = null;
 
-          activeGame.players = gamePlayers;
-          activeGame.changed('players', true);
+          const queuedPlayer = {
+            userId: newPlayerId,
+            chips: tableBuyIn,
+            committed: 0,
+            hand: null,
+            holeCards: null,
+            folded: true,
+            isSittingOut: true,
+            waitForNextHand: true,
+            lastAction: null,
+            betInPhase: 0
+          };
+
+          const dedupedPendingPlayers = pendingPlayers.filter(p => p.userId !== newPlayerId);
+          dedupedPendingPlayers.push(queuedPlayer);
+
+          activeGame.pendingPlayers = dedupedPendingPlayers;
+          activeGame.changed('pendingPlayers', true);
           await activeGame.save();
 
           const updatedActiveSeats = gamePlayers.filter(p => !p.isSittingOut).length;
@@ -268,7 +288,7 @@ export const startGame = async (req, res) => {
         });
       } else {
         // Permitir unirse a juego activo para entrar en la siguiente mano
-        if (activeSeats >= table.maxPlayers) {
+        if (occupiedSeats >= table.maxPlayers) {
           return res.status(400).json({
             error: 'La mesa está llena'
           });
@@ -281,24 +301,26 @@ export const startGame = async (req, res) => {
 
         await chargeBuyInForUser(newPlayerId, tableBuyIn);
 
-        gamePlayers.push({
+        const dedupedPendingPlayers = pendingPlayers.filter(p => p.userId !== newPlayerId);
+        dedupedPendingPlayers.push({
           userId: user.id,
           chips: tableBuyIn,
           committed: 0,
           hand: null,
           folded: true,
-          isSittingOut: false,
+          isSittingOut: true,
+          waitForNextHand: true,
           lastAction: null,
           betInPhase: 0
         });
 
-        activeGame.players = gamePlayers;
-        activeGame.changed('players', true);
+        activeGame.pendingPlayers = dedupedPendingPlayers;
+        activeGame.changed('pendingPlayers', true);
         await activeGame.save();
 
         const updatedActiveSeats = gamePlayers.filter(p => !p.isSittingOut).length;
         await table.update({
-          currentPlayers: Math.min(table.maxPlayers, updatedActiveSeats),
+          currentPlayers: Math.min(table.maxPlayers, updatedActiveSeats + dedupedPendingPlayers.length),
           status: updatedActiveSeats >= 2 ? 'playing' : 'waiting'
         });
 
@@ -368,10 +390,13 @@ export const startGame = async (req, res) => {
       }
 
       const seatedPlayers = gamePlayers.filter(p => !p.isSittingOut);
+      const queuedPlayers = typeof waitingGame.pendingPlayers === 'string'
+        ? JSON.parse(waitingGame.pendingPlayers || '[]')
+        : (waitingGame.pendingPlayers || []);
 
       await table.update({
         status: seatedPlayers.length >= 2 ? 'playing' : 'waiting',
-        currentPlayers: Math.min(table.maxPlayers, seatedPlayers.length)
+        currentPlayers: Math.min(table.maxPlayers, seatedPlayers.length + queuedPlayers.length)
       });
 
       try {
